@@ -52,6 +52,7 @@ def get_coordinates(address):
     trial1 = 0
     trial2 = 0
     location = None
+    geolocator = Nominatim(user_agent='hk_explorer')
     while location is None and trial0 < 5:
         trial0 += 1
         try:
@@ -111,12 +112,12 @@ with open(r'assets/.mapbox_token', 'rb') as f:
 px.set_mapbox_access_token(token)
 
 fig = px.scatter_mapbox(
-    coordinates_df, 
+    coordinates_df.dropna(), 
     lat="latitude", 
     lon="longitude",     
     hover_name = 'address',
     zoom=10,
-    title=r'Coronovirus High Risk Areas',
+    title=r'Coronavirus High Risk Areas',
     size=[1] * coordinates_df.shape[0],
     size_max=6,
     height=900
