@@ -2,4 +2,4 @@
 *.pyc
 .DS_Store
 .env
-./assets/.mapbox_token
+./assets/data/.mapbox_token

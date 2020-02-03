@@ -1,23 +1,27 @@
+import sys
+sys.path.insert(1, 'assets/src')
 import os
 
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_bootstrap_components as dbc
 
 import pickle
 import plotly.express as px
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from geopy.geocoders import Nominatim
 import numpy as np
-import time
+import datetime
+
+from wuhan_functions import pop_address, get_coordinates, get_infection_stats
 
 #########################
 ## Set up Dash
 #########################
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+external_stylesheets = [dbc.themes.BOOTSTRAP]
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
@@ -27,6 +31,8 @@ server = app.server
 #########################
 ## Get Data
 #########################
+
+death, confirmed, investigating, reported = get_infection_stats(r'assets/data/infection_stats.pkl')
 
 url = r'https://wars.vote4.hk/en/high-risk'
 hk_latitude, hk_longitude = 22.2793278, 114.1628131
@@ -40,48 +46,9 @@ html_addresses = soup.find_all(
 
 high_risk_addresses = [job_elem.text + ', Hong Kong' for job_elem in html_addresses]
 
-with open(r'assets/coordinates_df.pkl', 'rb') as f:
+with open(r'assets/data/coordinates_df.pkl', 'rb') as f:
     coordinates_df = pickle.load(f)
 
-def pop_address(address):
-    address_lst = address.split(',')
-    return ','.join(address_lst[1:])
-    
-def get_coordinates(address):
-    trial0 = 0
-    trial1 = 0
-    trial2 = 0
-    location = None
-    geolocator = Nominatim(user_agent='hk_explorer')
-    while location is None and trial0 < 5:
-        trial0 += 1
-        try:
-            location = geolocator.geocode(address)
-        except:
-            pass
-        time.sleep(1)
-    if location is None:
-        simplified_address1 = pop_address(address)
-        while location is None and trial1 < 5:
-            trial1 += 1
-            try:
-                location = geolocator.geocode(simplified_address1)
-            except:
-                pass
-            time.sleep(1)
-    if location is None:
-        simplified_address2 = pop_address(simplified_address1)
-        while location is None and trial2 < 5:
-            trial2 += 1
-            try:
-                location = geolocator.geocode(simplified_address2)
-            except:
-                pass
-            time.sleep(1)
-    if location:
-        return (location.latitude, location.longitude)
-    else:
-        return None, None
 
 for address in high_risk_addresses:
     if address in coordinates_df['address'].values:
@@ -98,14 +65,14 @@ for address in high_risk_addresses:
             ignore_index=True
         )
 
-with open(r'assets/coordinates_df.pkl', 'wb') as f:
+with open(r'assets/data/coordinates_df.pkl', 'wb') as f:
     pickle.dump(coordinates_df,f)
 
 #########################
 ## Plot Map
 #########################
 
-with open(r'assets/.mapbox_token', 'rb') as f:
+with open(r'assets/data/.mapbox_token', 'rb') as f:
     token = pickle.load(f)
 
 
@@ -117,17 +84,69 @@ fig = px.scatter_mapbox(
     lon="longitude",     
     hover_name = 'address',
     zoom=10,
-    title=r'Wuhan Coronavirus High Risk Areas',
+    title=r'High Risk Areas',
     size=[1] * coordinates_df.shape[0],
-    size_max=6,
-    height=900
+    size_max=15,
+    height=600
 )
 
 app.layout = html.Div([
-    dcc.Graph(
-        id='external-graph',
-        figure=fig
-    )
+	dbc.Row([
+		dbc.Col([
+			html.H1(r'Wuhan Coronavirus Dashboard', style={'text-align': 'center'})
+		])
+	]),
+	dbc.Row([
+		dbc.Col([
+			html.P(f'Last update: {datetime.datetime.now().strftime("%H:%M:%S")}', style={'text-align': 'right'})
+		])
+	]),
+	dbc.Row([
+		dbc.Col(
+			[
+				html.Div(
+					[html.H3(death), html.P('Death')],
+					className='mini_container'
+				)
+			]
+		),
+		dbc.Col(
+			[
+				html.Div(
+					[html.H3(confirmed), html.P('Confirmed')],
+					className='mini_container'
+				)
+			]
+		),
+		dbc.Col(
+			[
+				html.Div(
+					[html.H3(investigating), html.P('Investigating')],
+					className='mini_container'
+				)
+			]
+		),
+		dbc.Col(
+			[
+				html.Div(
+					[html.H3(reported), html.P('Reported')],
+					className='mini_container'
+				)
+			]
+		),
+	]),
+	dbc.Row([
+		dbc.Col([], width=4),
+		dbc.Col(
+			[
+				dcc.Graph(
+			        id='external-graph',
+			        figure=fig
+			    )
+			], 
+			width=8
+		)
+	])
 ])
 
 if __name__ == '__main__':
