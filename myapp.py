@@ -84,6 +84,7 @@ for address in high_risk_addresses:
 with open(r'assets/data/coordinates_df.pkl', 'wb') as f:
     pickle.dump(coordinates_df,f)
 
+
 # 3. Cases
 try:
 	cases_df = fetch_cases()
@@ -176,7 +177,8 @@ app.layout = html.Div([
 				dash_table.DataTable(
 					data=cases_df.to_dict('records'),
 					columns=[{'id': c, 'name': c} for c in cases_df.columns],
-					style_table={'overflowX': 'scroll'}
+					style_table={'overflowX': 'scroll'},
+					style_cell={'font-family': 'sans-serif'}
 				)
 			], 
 			width=4
@@ -196,7 +198,8 @@ app.layout = html.Div([
 			dash_table.DataTable(
 				id='table',
 				columns=[{"name": i, "id": i} for i in awaiting_df.columns],
-				data=awaiting_df.to_dict("rows")
+				data=awaiting_df.to_dict("rows"),
+				style_cell={'font-family': 'sans-serif'}
 		    )
 		])
 	])

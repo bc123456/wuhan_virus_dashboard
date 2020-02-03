@@ -59,10 +59,10 @@ def fetch_cases():
         
         #get gender from age_and_gender
         gender = None
-        if 'male' in age_and_gender.lower():
-            gender = 'Male'
-        elif 'female' in age_and_gender.lower():
+        if 'female' in age_and_gender.lower():
             gender = 'Female'
+        elif 'male' in age_and_gender.lower():
+            gender = 'Male'
 
         res.append({
             'casenum': str(casenum),
