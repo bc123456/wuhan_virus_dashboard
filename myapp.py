@@ -111,7 +111,6 @@ except Exception as e:
 with open(r'assets/data/.mapbox_token', 'rb') as f:
     token = pickle.load(f)
 
-
 px.set_mapbox_access_token(token)
 
 fig = px.scatter_mapbox(
@@ -123,8 +122,13 @@ fig = px.scatter_mapbox(
     title=r'High Risk Areas',
     size=[1] * coordinates_df.shape[0],
     size_max=15,
-    height=600
+    height=550
 )
+fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0})
+
+#########################
+## Website Layout
+#########################
 
 app.layout = html.Div([
 	dbc.Row([
@@ -192,6 +196,11 @@ app.layout = html.Div([
 			], 
 			width=8
 		)
+	]),
+	dbc.Row([
+		dbc.Col([
+			html.H4(['A&E Waiting Time'])
+		])
 	]),
 	dbc.Row([
 		dbc.Col([
