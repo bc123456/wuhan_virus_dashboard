@@ -114,15 +114,18 @@ with open(r'assets/data/.mapbox_token', 'rb') as f:
 px.set_mapbox_access_token(token)
 
 fig = px.scatter_mapbox(
-    coordinates_df.dropna(), 
+    coordinates_df.dropna(),
+    mapbox_style='satellite-streets',
     lat="latitude", 
     lon="longitude",     
     hover_name = 'address',
     zoom=10,
     title=r'High Risk Areas',
     size=[1] * coordinates_df.shape[0],
-    size_max=15,
-    height=550
+    size_max=8,
+    opacity=1,
+    color_discrete_sequence=px.colors.cyclical.HSV,
+    height=800
 )
 fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0})
 
@@ -179,10 +182,18 @@ app.layout = html.Div([
 		dbc.Col(
 			[
 				dash_table.DataTable(
-					data=cases_df.to_dict('records'),
-					columns=[{'id': c, 'name': c} for c in cases_df.columns],
-					style_table={'overflowX': 'scroll'},
-					style_cell={'font-family': 'sans-serif'}
+					data=cases_df[['gender', 'age', 'hospital', 'date']].to_dict('records'),
+					columns=[{'id': c, 'name': c} for c in cases_df[['gender', 'age', 'hospital', 'date']].columns],
+					# style_table={'overflowX': 'scroll'},
+					style_cell={
+						'fontSize':14, 
+						'font-family': 'sans-serif', 
+						'textAlign': 'left',
+						'height': 'auto',
+						'minWidth': '0px', 'maxWidth': '60px',
+						'whiteSpace': 'normal'
+					},
+					style_as_list_view=True
 				)
 			], 
 			width=4
@@ -208,7 +219,11 @@ app.layout = html.Div([
 				id='table',
 				columns=[{"name": i, "id": i} for i in awaiting_df.columns],
 				data=awaiting_df.to_dict("rows"),
-				style_cell={'font-family': 'sans-serif'}
+				style_cell={
+					'fontSize': 14,
+					'font-family': 'sans-serif',
+				},
+				style_as_list_view=True
 		    )
 		])
 	])
