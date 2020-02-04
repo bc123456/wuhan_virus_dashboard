@@ -9,6 +9,9 @@ from lxml import html
 import requests
 import pandas as pd
 import re
+from bs4 import BeautifulSoup
+
+hk_latitude, hk_longitude = 22.2793278, 114.1628131
 
 def fetch_highrisk():
     """
@@ -127,3 +130,22 @@ def fetch_stat():
     df = pd.DataFrame(data=[res], columns=statnames)
 
     return df
+
+def fetch_high_risk_address():
+    """
+    Return a list of high risk addresses that confirmed cases have visited
+
+    """
+    url = r'https://wars.vote4.hk/en/high-risk'
+
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'html.parser')
+
+    html_addresses = soup.find_all(
+        'span', 
+        class_=r'MuiTypography-root MuiTypography-h6 MuiTypography-colorTextPrimary'
+    )
+
+    res = [job_elem.text + ', Hong Kong' for job_elem in html_addresses]
+
+    return res

@@ -11,14 +11,13 @@ import dash_bootstrap_components as dbc
 import pickle
 import plotly.express as px
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
+
 import numpy as np
 import datetime
 import pytz
 tz = pytz.timezone('Asia/Hong_Kong')
 
-from wuhan_functions import pop_address, get_coordinates, get_infection_stats
+from wuhan_functions import pop_address, get_coordinates, get_infection_stats, update_address
 from webscraper import fetch_stat, fetch_cases, fetch_awaiting_time
 
 #########################
@@ -55,36 +54,11 @@ reported = stats_df.loc[0, 'Reported']
 
 # 2. Addresses
 
-url = r'https://wars.vote4.hk/en/high-risk'
-hk_latitude, hk_longitude = 22.2793278, 114.1628131
-page = requests.get(url)
-soup = BeautifulSoup(page.content, 'html.parser')
-
-html_addresses = soup.find_all(
-    'span', 
-    class_=r'MuiTypography-root MuiTypography-h6 MuiTypography-colorTextPrimary'
-)
-
-high_risk_addresses = [job_elem.text + ', Hong Kong' for job_elem in html_addresses]
 
 with open(r'assets/data/ADDRESS.pkl', 'rb') as f:
     address_df = pickle.load(f)
 
-
-for address in high_risk_addresses:
-    if address in address_df['address'].values:
-        pass
-    else:
-        latitude, longitude = get_coordinates(address)
-        address_df = address_df.append(
-            pd.Series({
-                'loc_id': address_df['loc_id'].max() + 1,
-                'address': address,
-                'latitude': latitude,
-                'longitude': longitude
-            }),
-            ignore_index=True
-        )
+address_df = update_address(address_df)
 
 with open(r'assets/data/ADDRESS.pkl', 'wb') as f:
     pickle.dump(address_df,f)
@@ -122,19 +96,25 @@ with open(r'assets/data/.mapbox_token', 'rb') as f:
 
 px.set_mapbox_access_token(token)
 
+map_df = address_df.copy()
+map_df['color'] = None
+map_df.at[map_df['category'] == 'High Risk', 'color'] = 1
+map_df.at[map_df['category'] == 'Hospital', 'color'] = 0
+
 fig = px.scatter_mapbox(
-    address_df.dropna(),
-    mapbox_style='satellite-streets',
+    map_df.dropna(),
+    mapbox_style='light',
     lat="latitude", 
     lon="longitude",     
     hover_name = 'address',
-    zoom=10,
-    title=r'High Risk Areas',
-    size=[1] * address_df.shape[0],
+    zoom=9,
+    # title=r'High Risk Areas',
+    size=[1] * map_df.dropna().shape[0],
     size_max=10,
-    opacity=1,
-    color_discrete_sequence=px.colors.cyclical.HSV,
-    height=None
+    opacity=0.9,
+    color='category',
+    color_discrete_sequence=px.colors.sequential.Bluered[::-1],
+    height=540
 )
 fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0, 't': 0})
 
@@ -186,6 +166,20 @@ app.layout = html.Div([
 				)
 			]
 		),
+	]),
+	dbc.Row([
+		dbc.Col(
+			[
+				html.H4(['Confirmed Cases']),
+			],
+			width=4
+		),
+		dbc.Col(
+			[
+				html.H4(['High Risk Areas']),
+			],
+			width=8
+		)
 	]),
 	dbc.Row([
 		dbc.Col(

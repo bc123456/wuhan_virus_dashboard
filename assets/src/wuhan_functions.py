@@ -1,6 +1,7 @@
 from geopy.geocoders import Nominatim
 import time
 import pickle
+from webscraper import fetch_high_risk_address
 
 def get_infection_stats(path):
     with open(path, 'rb') as f:
@@ -53,3 +54,22 @@ def get_coordinates(address):
         return (location.latitude, location.longitude)
     else:
         return None, None
+
+def update_address(address_df):
+    high_risk_addresses = fetch_high_risk_address()
+    for address in high_risk_addresses:
+        if address in address_df['address'].values:
+            pass
+        else:
+            latitude, longitude = get_coordinates(address)
+            address_df = address_df.append(
+                pd.Series({
+                    'loc_id': address_df['loc_id'].max() + 1,
+                    'address': address,
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'category': 'High Risk'
+                }),
+                ignore_index=True
+            )
+    return address_df

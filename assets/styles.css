@@ -141,3 +141,8 @@ body {
   pointer-events: all;
   transform: translate(30px, 349px);
 }
+
+/*remove the plotly toolbar*/
+.modebar{
+      display: none !important;
+}
