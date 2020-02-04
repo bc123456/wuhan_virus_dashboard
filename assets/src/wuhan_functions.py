@@ -1,6 +1,7 @@
 from geopy.geocoders import Nominatim
 import time
 import pickle
+import pandas as pd
 from webscraper import fetch_high_risk_address
 
 def get_infection_stats(path):
