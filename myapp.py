@@ -15,6 +15,8 @@ import requests
 from bs4 import BeautifulSoup
 import numpy as np
 import datetime
+import pytz
+tz = pytz.timezone('Asia/Hong_Kong')
 
 from wuhan_functions import pop_address, get_coordinates, get_infection_stats
 from webscraper import fetch_stat, fetch_cases, fetch_awaiting_time
@@ -148,7 +150,7 @@ app.layout = html.Div([
 	]),
 	dbc.Row([
 		dbc.Col([
-			html.P(f'Last update: {datetime.datetime.now().strftime("%H:%M:%S")}', style={'text-align': 'right'})
+			html.P(f'Last update: {datetime.datetime.now().strftime("%H:%M:%S")} (HKT)', style={'text-align': 'right'})
 		])
 	]),
 	dbc.Row([
