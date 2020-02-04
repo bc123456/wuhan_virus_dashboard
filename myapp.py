@@ -37,11 +37,14 @@ server = app.server
 # 1. Stats
 try:
 	stats_df = fetch_stat()
+	with open(r'assets/data/STATS.pkl', 'wb') as f:
+		pickle.dump(stats_df, f)
 except Exception as e:
 	print(e)
 	print(f'Get stat data failed')
 	with open(r'assets/data/STATS.pkl', 'rb') as f:
 		stats_df = pickle.load(f)
+
 
 death = stats_df.loc[0, 'Death']
 confirmed = stats_df.loc[0, 'Confirmed']
@@ -62,18 +65,18 @@ html_addresses = soup.find_all(
 
 high_risk_addresses = [job_elem.text + ', Hong Kong' for job_elem in html_addresses]
 
-with open(r'assets/data/coordinates_df.pkl', 'rb') as f:
-    coordinates_df = pickle.load(f)
+with open(r'assets/data/ADDRESS.pkl', 'rb') as f:
+    address_df = pickle.load(f)
 
 
 for address in high_risk_addresses:
-    if address in coordinates_df['address'].values:
+    if address in address_df['address'].values:
         pass
     else:
         latitude, longitude = get_coordinates(address)
-        coordinates_df = coordinates_df.append(
+        address_df = address_df.append(
             pd.Series({
-                'loc_id': coordinates_df['loc_id'].max() + 1,
+                'loc_id': address_df['loc_id'].max() + 1,
                 'address': address,
                 'latitude': latitude,
                 'longitude': longitude
@@ -81,13 +84,15 @@ for address in high_risk_addresses:
             ignore_index=True
         )
 
-with open(r'assets/data/coordinates_df.pkl', 'wb') as f:
-    pickle.dump(coordinates_df,f)
+with open(r'assets/data/ADDRESS.pkl', 'wb') as f:
+    pickle.dump(address_df,f)
 
 
 # 3. Cases
 try:
 	cases_df = fetch_cases()
+	with open(r'assets/data/CASES.pkl', 'wb') as f:
+		pickle.dump(cases_df, f)
 except Exception as e:
 	print(e)
 	print(f'Get cases data failed')
@@ -97,6 +102,8 @@ except Exception as e:
 # 4. Awaiting time
 try:
 	awaiting_df = fetch_awaiting_time()
+	with open(r'assets/data/AWAITING.pkl', 'wb') as f:
+		pickle.dump(awaiting_df, f)
 except Exception as e:
 	print(e)
 	print(f'Get awaiting time data failed')
@@ -114,20 +121,20 @@ with open(r'assets/data/.mapbox_token', 'rb') as f:
 px.set_mapbox_access_token(token)
 
 fig = px.scatter_mapbox(
-    coordinates_df.dropna(),
+    address_df.dropna(),
     mapbox_style='satellite-streets',
     lat="latitude", 
     lon="longitude",     
     hover_name = 'address',
     zoom=10,
     title=r'High Risk Areas',
-    size=[1] * coordinates_df.shape[0],
-    size_max=8,
+    size=[1] * address_df.shape[0],
+    size_max=10,
     opacity=1,
     color_discrete_sequence=px.colors.cyclical.HSV,
-    height=800
+    height=None
 )
-fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0})
+fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0, 't': 0})
 
 #########################
 ## Website Layout
@@ -189,9 +196,11 @@ app.layout = html.Div([
 						'fontSize':14, 
 						'font-family': 'sans-serif', 
 						'textAlign': 'left',
-						'height': 'auto',
-						'minWidth': '0px', 'maxWidth': '60px',
-						'whiteSpace': 'normal'
+						# 'height': 'auto',
+						'minWidth': '0px', 'maxWidth': '80px',
+						# 'whiteSpace': 'normal',
+						'textOverflow': 'ellipsis',
+						'overflow': 'hidden'
 					},
 					style_as_list_view=True
 				)
