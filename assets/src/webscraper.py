@@ -8,6 +8,7 @@ Created on Mon Feb  3 12:50:18 2020
 from lxml import html
 import requests
 import pandas as pd
+import re
 
 def fetch_highrisk():
     """
@@ -53,7 +54,14 @@ def fetch_cases():
         desc = box.xpath('./div[4]/p/text()')[0]
         
         # clean up casenum
-        casenum = casenum.replace('#', '').replace('(Confirmed)', '').strip()
+        m = re.search(r'\#([0-9]{1,2})\s\(([^\)]+)\)', casenum)
+        if m:
+            casenum = m.group(1)
+            case_status = m.group(2)
+        else:
+            casenum = '#N/A'
+            case_status = '#N/A'
+            
         #get age from age_and_gender
         age = age_and_gender.replace('Age', '').replace('Male', '').replace('Female', '').strip()
         
@@ -66,6 +74,7 @@ def fetch_cases():
 
         res.append({
             'casenum': str(casenum),
+            'casestatus': str(case_status),
             'status': str(status),
             'age': int(age),
             'gender': str(gender),
