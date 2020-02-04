@@ -130,7 +130,7 @@ app.layout = html.Div([
 	]),
 	dbc.Row([
 		dbc.Col([
-			html.P(f'Last update: {datetime.datetime.now().strftime("%H:%M:%S")} (HKT)', style={'text-align': 'right'})
+			html.P(f'Last update: {datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S %Z%z")}', style={'text-align': 'right'})
 		])
 	]),
 	dbc.Row([
