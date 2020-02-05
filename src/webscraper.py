@@ -79,7 +79,7 @@ def fetch_cases():
             'casenum': str(casenum),
             'casestatus': str(case_status),
             'status': str(status),
-            'age': int(age),
+            'age': str(age),
             'gender': str(gender),
             'date': str(date),
             'residence': str(residence),

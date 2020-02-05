@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(1, 'assets/src')
+sys.path.insert(1, 'src')
 import os
 
 import dash
@@ -7,6 +7,7 @@ import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
+from dash.dependencies import Input, Output
 
 import pickle
 import plotly.express as px
@@ -35,53 +36,36 @@ server = app.server
 ## Get Data
 #########################
 
-# 1. Stats
-try:
-	stats_df = fetch_stat()
-	with open(r'assets/data/STATS.pkl', 'wb') as f:
-		pickle.dump(stats_df, f)
-except Exception as e:
-	print(e)
-	print(f'Get stat data failed')
-	with open(r'assets/data/STATS.pkl', 'rb') as f:
-		stats_df = pickle.load(f)
-
-
-death = stats_df.loc[0, 'Death']
-confirmed = stats_df.loc[0, 'Confirmed']
-investigating = stats_df.loc[0, 'Investigating']
-reported = stats_df.loc[0, 'Reported']
-
 # 2. Addresses
-with open(r'assets/data/ADDRESS.pkl', 'rb') as f:
+with open(r'data/ADDRESS.pkl', 'rb') as f:
     address_df = pickle.load(f)
 
 address_df = update_address(address_df)
 
-with open(r'assets/data/ADDRESS.pkl', 'wb') as f:
+with open(r'data/ADDRESS.pkl', 'wb') as f:
     pickle.dump(address_df,f)
 
 
 # 3. Cases
 try:
 	cases_df = fetch_cases()
-	with open(r'assets/data/CASES.pkl', 'wb') as f:
+	with open(r'data/CASES.pkl', 'wb') as f:
 		pickle.dump(cases_df, f)
 except Exception as e:
 	print(e)
 	print(f'Get cases data failed')
-	with open(r'assets/data/CASES.pkl', 'rb') as f:
+	with open(r'data/CASES.pkl', 'rb') as f:
 		cases_df = pickle.load(f)
 
 # 4. Awaiting time
 try:
 	awaiting_df = fetch_awaiting_time()
-	with open(r'assets/data/AWAITING.pkl', 'wb') as f:
+	with open(r'data/AWAITING.pkl', 'wb') as f:
 		pickle.dump(awaiting_df, f)
 except Exception as e:
 	print(e)
 	print(f'Get awaiting time data failed')
-	with open(r'assets/data/AWAITING.pkl', 'rb') as f:
+	with open(r'data/AWAITING.pkl', 'rb') as f:
 		awaiting_df = pickle.load(f)
 
 
@@ -96,7 +80,7 @@ def plot_map(address_df):
 
 	'''
 
-	with open(r'assets/data/.mapbox_token', 'rb') as f:
+	with open(r'data/.mapbox_token', 'rb') as f:
 	    token = pickle.load(f)
 
 	px.set_mapbox_access_token(token)
@@ -128,6 +112,7 @@ def plot_map(address_df):
 ## Website Layout
 #########################
 
+
 app.layout = html.Div([
 	dbc.Row([
 		dbc.Col([
@@ -139,40 +124,7 @@ app.layout = html.Div([
 			html.P(f'Last update: {datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S %Z%z")}', style={'text-align': 'right'})
 		])
 	]),
-	dbc.Row([
-		dbc.Col(
-			[
-				html.Div(
-					[html.H3(death), html.P('Death')],
-					className='mini_container'
-				)
-			]
-		),
-		dbc.Col(
-			[
-				html.Div(
-					[html.H3(confirmed), html.P('Confirmed')],
-					className='mini_container'
-				)
-			]
-		),
-		dbc.Col(
-			[
-				html.Div(
-					[html.H3(investigating), html.P('Investigating')],
-					className='mini_container'
-				)
-			]
-		),
-		dbc.Col(
-			[
-				html.Div(
-					[html.H3(reported), html.P('Reported')],
-					className='mini_container'
-				)
-			]
-		),
-	]),
+	dbc.Row(id='live-update-stats'),
 	dbc.Row([
 		dbc.Col(
 			[
@@ -240,10 +192,79 @@ app.layout = html.Div([
 	]),
 	dcc.Interval(
         id='interval-component',
-        interval=1*1000, # in milliseconds
+        interval=60*1000, # in milliseconds
         n_intervals=0
     )
 ])
 
+#########################
+## Live Components
+#########################
+
+@app.callback(
+	Output('live-update-stats', 'children'),
+	[Input('interval-component', 'n_intervals')]
+)
+def update_stats_cards(n):
+	'''
+	Return a list of four dbc.Col() objects. Corresponding to the number of Deaths, Confirmed, Investigating and Reported
+	'''
+	# Get stats data
+
+	# 1. Stats
+	try:
+		stats_df = fetch_stat()
+		with open(r'data/STATS.pkl', 'wb') as f:
+			pickle.dump(stats_df, f)
+	except Exception as e:
+		print(e)
+		print(f'Get stat data failed')
+		with open(r'data/STATS.pkl', 'rb') as f:
+			stats_df = pickle.load(f)
+
+
+	death = stats_df.loc[0, 'Death']
+	confirmed = stats_df.loc[0, 'Confirmed']
+	investigating = stats_df.loc[0, 'Investigating']
+	reported = stats_df.loc[0, 'Reported']
+
+	return [
+		dbc.Col(
+			[
+				html.Div(
+					[html.H3(death), html.P('Death')],
+					className='mini_container'
+				)
+			]
+		),
+		dbc.Col(
+			[
+				html.Div(
+					[html.H3(confirmed), html.P('Confirmed')],
+					className='mini_container'
+				)
+			]
+		),
+		dbc.Col(
+			[
+				html.Div(
+					[html.H3(investigating), html.P('Investigating')],
+					className='mini_container'
+				)
+			]
+		),
+		dbc.Col(
+			[
+				html.Div(
+					[html.H3(reported), html.P('Reported')],
+					className='mini_container'
+				)
+			]
+		),
+	]
+
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(
+    	debug=True,
+    	dev_tools_hot_reload_watch_interval=3
+    )
