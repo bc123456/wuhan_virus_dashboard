@@ -53,8 +53,6 @@ investigating = stats_df.loc[0, 'Investigating']
 reported = stats_df.loc[0, 'Reported']
 
 # 2. Addresses
-
-
 with open(r'assets/data/ADDRESS.pkl', 'rb') as f:
     address_df = pickle.load(f)
 
@@ -91,32 +89,39 @@ except Exception as e:
 ## Plot Map
 #########################
 
-with open(r'assets/data/.mapbox_token', 'rb') as f:
-    token = pickle.load(f)
 
-px.set_mapbox_access_token(token)
+def plot_map(address_df):
+	'''
+	Plot the map with labels showing the hospitals and high risk areas
 
-map_df = address_df.copy()
-map_df['color'] = None
-map_df.at[map_df['category'] == 'High Risk', 'color'] = 1
-map_df.at[map_df['category'] == 'Hospital', 'color'] = 0
+	'''
 
-fig = px.scatter_mapbox(
-    map_df.dropna(),
-    mapbox_style='light',
-    lat="latitude", 
-    lon="longitude",     
-    hover_name = 'address',
-    zoom=9,
-    # title=r'High Risk Areas',
-    size=[1] * map_df.dropna().shape[0],
-    size_max=10,
-    opacity=0.9,
-    color='category',
-    color_discrete_sequence=px.colors.sequential.Bluered[::-1],
-    height=540
-)
-fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0, 't': 0})
+	with open(r'assets/data/.mapbox_token', 'rb') as f:
+	    token = pickle.load(f)
+
+	px.set_mapbox_access_token(token)
+
+	map_df = address_df.copy()
+
+
+	fig = px.scatter_mapbox(
+	    map_df.dropna(),
+	    mapbox_style='light',
+	    lat="latitude", 
+	    lon="longitude",     
+	    hover_name = 'address',
+	    zoom=10,
+	    # title=r'High Risk Areas',
+	    size=[1] * map_df.dropna().shape[0],
+	    size_max=9,
+	    opacity=0.9,
+	    color='category',
+	    color_discrete_sequence=px.colors.sequential.Bluered[::-1],
+	    height=540
+	)
+	fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0, 't': 0})
+
+	return fig
 
 
 #########################
@@ -186,8 +191,8 @@ app.layout = html.Div([
 		dbc.Col(
 			[
 				dash_table.DataTable(
-					data=cases_df[['gender', 'age', 'hospital', 'date']].to_dict('records'),
-					columns=[{'id': c, 'name': c} for c in cases_df[['gender', 'age', 'hospital', 'date']].columns],
+					data=cases_df[['casenum', 'gender', 'age', 'hospital', 'date']].to_dict('records'),
+					columns=[{'id': c, 'name': c} for c in cases_df[['casenum', 'gender', 'age', 'hospital', 'date']].columns],
 					# style_table={'overflowX': 'scroll'},
 					style_cell={
 						'fontSize':14, 
@@ -208,7 +213,7 @@ app.layout = html.Div([
 			[
 				dcc.Graph(
 			        id='external-graph',
-			        figure=fig
+			        figure=plot_map(address_df)
 			    )
 			], 
 			width=8
@@ -232,7 +237,12 @@ app.layout = html.Div([
 				style_as_list_view=True
 		    )
 		])
-	])
+	]),
+	dcc.Interval(
+        id='interval-component',
+        interval=1*1000, # in milliseconds
+        n_intervals=0
+    )
 ])
 
 if __name__ == '__main__':
