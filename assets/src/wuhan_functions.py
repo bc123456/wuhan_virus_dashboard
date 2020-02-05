@@ -21,6 +21,8 @@ def pop_address(address):
     return ','.join(address_lst[1:])
     
 def get_coordinates(address):
+    print(f'Getting the coordinates for new address: {address}.')
+    address = address + ', Hong Kong'
     trial0 = 0
     trial1 = 0
     trial2 = 0

@@ -146,6 +146,6 @@ def fetch_high_risk_address():
         class_=r'MuiTypography-root MuiTypography-h6 MuiTypography-colorTextPrimary'
     )
 
-    res = [job_elem.text + ', Hong Kong' for job_elem in html_addresses]
+    res = [job_elem.text for job_elem in html_addresses]
 
     return res
