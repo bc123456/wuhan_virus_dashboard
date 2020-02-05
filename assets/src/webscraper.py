@@ -124,7 +124,7 @@ def fetch_stat():
     page = requests.get('https://wars.vote4.hk/en/')
     tree = html.fromstring(page.content)
 
-    boxes = tree.xpath('//div[contains(@class, "pages__DailyStatsContainer-sc-6kvjaa-1")]/div')
+    boxes = tree.xpath('//div[contains(@class, "pages__DailyStatsContainer")]/div')
     res = [int(box.xpath('./p[1]/text()')[0]) for box in boxes]
     
     df = pd.DataFrame(data=[res], columns=statnames)
