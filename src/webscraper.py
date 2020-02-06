@@ -125,7 +125,7 @@ def fetch_stat():
     tree = html.fromstring(page.content)
 
     boxes = tree.xpath('//div[contains(@class, "pages__DailyStatsContainer")]/div')
-    res = [int(box.xpath('./p[1]/text()')[0]) for box in boxes]
+    res = [int(box.xpath('./p[1]/text()')[0].replace(',', '')) for box in boxes]
     
     df = pd.DataFrame(data=[res], columns=statnames)
 
