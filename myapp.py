@@ -40,17 +40,27 @@ server = app.server
 with open(r'data/ADDRESS.pkl', 'rb') as f:
     address_df = pickle.load(f)
 
-address_df = update_address(address_df)
+try:
+	new_address_df = update_address(address_df)
 
-with open(r'data/ADDRESS.pkl', 'wb') as f:
-    pickle.dump(address_df,f)
+	with open(r'data/ADDRESS.pkl', 'wb') as f:
+		pickle.dump(new_address_df,f)
+
+	address_df = new_address_df
+
+
+except Exception as e:
+	print('Get new addresses failed.')
+
 
 
 # 3. Cases
 try:
-	cases_df = fetch_cases()
-	with open(r'data/CASES.pkl', 'wb') as f:
-		pickle.dump(cases_df, f)
+	with open(r'data/CASES.pkl', 'rb') as f:
+		cases_df = pickle.load(f)
+	# cases_df = fetch_cases()
+	# with open(r'data/CASES.pkl', 'wb') as f:
+	# 	pickle.dump(cases_df, f)
 except Exception as e:
 	print(e)
 	print(f'Get cases data failed')
