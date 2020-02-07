@@ -15,7 +15,7 @@ import json
 hk_latitude, hk_longitude = 22.2793278, 114.1628131
 
 def fetch_highrisk_css():
-    """
+    """ (Deprecated)
     Returns a list of dictionary that contains the high risk area information.
     
     """
@@ -37,7 +37,7 @@ def fetch_highrisk_css():
 
 def fetch_highrisk():
     """
-    Returns a list of dictionary that contains the high risk area information.
+    Returns a DataFrame that contains the high risk area information.
     
     """
     page = requests.get('https://wars.vote4.hk/page-data/en/high-risk/page-data.json')
@@ -48,8 +48,13 @@ def fetch_highrisk():
     
     for case in cases:
         res.append(case['node'])
+
+    ## Change the 'case' column to one that uses string instead of dictionary
+    high_risk_df = pd.DataFrame(res)
+    high_risk_df['case'] = high_risk_df['case'].apply(lambda d: d['case_no'] if type(d) == dict else '')
     
-    return pd.DataFrame(res)
+
+    return high_risk_df
 
 def fetch_cases():
     """
@@ -66,10 +71,13 @@ def fetch_cases():
     for case in cases:
         res.append(case['node'])
     
-    return pd.DataFrame(res)
+    cases_df = pd.DataFrame(res)
+    cases_df = cases_df.sort_values(by='confirmation_date', ascending=False)
+    
+    return cases_df
 
 def fetch_cases_css():
-    """
+    """ (Deprecated)
     Returns a DataFrame that contains the confirmed cases information.
 
     """
@@ -125,7 +133,7 @@ def fetch_cases_css():
     return pd.DataFrame(res)
     
 def fetch_awaiting_time():
-    """
+    """ 
     Return a list of dictionary that contains the hospital awaiting time.
     
     """
@@ -141,7 +149,7 @@ def fetch_awaiting_time():
     return pd.DataFrame(res)
 
 def fetch_awaiting_time_css():
-    """
+    """ (Deprecated)
     Return a list of dictionary that contains the hospital awaiting time.
     
     """
@@ -182,7 +190,7 @@ def fetch_stat():
     return df
 
 def fetch_stat_css():
-    """
+    """ (Deprecated)
     Return a DataFrame that represent death, confirmed, investigating and reported numbers respectively.
 
     """
@@ -199,7 +207,7 @@ def fetch_stat_css():
     return df
 
 def fetch_high_risk_address():
-    """
+    """ (Deprecated)
     Return a list of high risk addresses that confirmed cases have visited
 
     """

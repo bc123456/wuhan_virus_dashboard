@@ -4,17 +4,6 @@ import pickle
 import pandas as pd
 from webscraper import fetch_high_risk_address
 
-def get_infection_stats(path):
-    with open(path, 'rb') as f:
-        infection_stats = pickle.load(f)
-
-    return (
-        infection_stats['death'], 
-        infection_stats['confirmed'], 
-        infection_stats['investigating'], 
-        infection_stats['reported']
-    )
-
 
 def pop_address(address):
     address_lst = address.split(',')
@@ -58,21 +47,34 @@ def get_coordinates(address):
     else:
         return None, None
 
-def update_address(address_df):
-    high_risk_addresses = fetch_high_risk_address()
-    for address in high_risk_addresses:
-        if address in address_df['address'].values:
-            pass
+def update_address(address_df, high_risk_df):
+    unseen_df = high_risk_df[
+        ~high_risk_df['id'].isin(address_df['id'])
+    ][
+        ['id', 'sub_district_zh', 'sub_district_en', 'location_en', 'location_zh']
+    ].copy()
+
+    for idx, row in unseen_df.iterrows():
+        address_name = row['location_en'] + ', ' + row['sub_district_en']
+        if 'high speed rail' in address_name.lower():
+            latitude = 22.304080
+            longitude = 114.166501
+        elif '航空' in row['location_zh']:
+            latitude = 22.308007
+            longitude = 113.918803
         else:
-            latitude, longitude = get_coordinates(address)
-            address_df = address_df.append(
-                pd.Series({
-                    'loc_id': address_df['loc_id'].max() + 1,
-                    'address': address,
-                    'latitude': latitude,
-                    'longitude': longitude,
-                    'category': 'High Risk'
-                }),
-                ignore_index=True
-            )
+            latitude, longitude = get_coordinates(address_name)
+
+        address_df = address_df.append(
+            pd.Series({
+                'id': row['id'],
+                'sub_district_zh': row['sub_district_zh'],
+                'sub_district_en': row['sub_district_en'],
+                'location_en': row['location_en'],
+                'location_zh': row['location_zh'],
+                'latitude': row['latitude'],
+                'longitude': row['longitude'],
+            })
+        )
     return address_df
+

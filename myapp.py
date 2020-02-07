@@ -11,6 +11,7 @@ from dash.dependencies import Input, Output
 
 import pickle
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 
 import numpy as np
@@ -18,13 +19,13 @@ import datetime
 import pytz
 tz = pytz.timezone('Asia/Hong_Kong')
 
-from wuhan_functions import pop_address, get_coordinates, get_infection_stats, update_address
-from webscraper import fetch_stat, fetch_cases, fetch_awaiting_time
+from wuhan_functions import pop_address, get_coordinates, update_address
+from webscraper import fetch_stat, fetch_cases, fetch_awaiting_time, fetch_highrisk
 
 #########################
 ## Update data with the data source?
 #########################
-update = False
+update = True
 
 if update:
 	print('Pulling data online.')
@@ -50,20 +51,33 @@ server = app.server
 with open(r'data/ADDRESS.pkl', 'rb') as f:
     address_df = pickle.load(f)
 
+with open(r'data/HIGH_RISK.pkl', 'rb') as f:
+	high_risk_df = pickle.load(f)
+
+
 if update:
+	# update the high risk location data
 	try:
-		new_address_df = update_address(address_df)
-
-		with open(r'data/ADDRESS.pkl', 'wb') as f:
-			pickle.dump(new_address_df,f)
-
-		address_df = new_address_df
-
-
+		high_risk_df = fetch_highrisk()
+		with open(r'data/HIGH_RISK.pkl', 'wb') as f:
+			pickle.dump(high_risk_df, f)
 	except Exception as e:
-		print('Get new addresses failed.')
+		print('Get new high risk location failed.')
+	# update the new address with coordinates
+	try:
+		address_df = update_address(address_df, high_risk_df)
+		with open(r'data/ADDRESS.pkl', 'wb') as f:
+			pickle.dump(address_df, f)
+	except Exception as e:
+		print('Update address coordinates failed.')
 
-
+high_risk_with_coordinates_df = pd.merge(
+	high_risk_df,
+	address_df[['id', 'latitude', 'longitude']],
+	how='left',
+	left_on='id',
+	right_on='id'
+)
 
 # 3. Cases
 
@@ -92,6 +106,10 @@ if update:
 		print(e)
 		print(f'Get awaiting time data failed')
 	
+# hospitals
+
+with open(r'data/HOSPITALS.pkl', 'rb') as f:
+	hospital_df = pickle.load(f)
 
 
 #########################
@@ -110,26 +128,57 @@ def plot_map(address_df):
 
 	px.set_mapbox_access_token(token)
 
-	map_df = address_df.copy()
+	map_df = high_risk_with_coordinates_df.copy().dropna()
 
+	fig = go.Figure()
 
-	fig = px.scatter_mapbox(
-	    map_df.dropna(),
-	    mapbox_style='light',
-	    lat="latitude", 
-	    lon="longitude",     
-	    hover_name = 'address',
-	    zoom=10,
-	    # title=r'High Risk Areas',
-	    size=[1] * map_df.dropna().shape[0],
-	    size_max=6,
-	    opacity=0.9,
-	    color='category',
-	    color_discrete_sequence=px.colors.sequential.Bluered[::-1],
-	    height=740
+	fig.add_trace(go.Scattermapbox(
+		lat=map_df['latitude'],
+		lon=map_df['longitude'],
+		mode='markers',
+		marker=go.scattermapbox.Marker(
+			size=6,
+			color='rgb(255, 0, 0)',
+			opacity=0.9
+		),
+		text=map_df['location_en'],
+		hoverinfo='text',
+		name='High Risk Area'
+	))
+	fig.add_trace(go.Scattermapbox(
+		lat=hospital_df['latitude'],
+		lon=hospital_df['longitude'],
+		mode='markers',
+		marker=go.scattermapbox.Marker(
+			size=6,
+			color='rgb(0, 0, 255)',
+			opacity=0.9
+		),
+		text=hospital_df['address'],
+		hoverinfo='text',
+		name='Hospitals'
+	))
+	fig.update_layout(
+		autosize=True,
+		hovermode='closest',
+		showlegend=True,
+		mapbox=go.layout.Mapbox(
+			accesstoken=token,
+			bearing=0,
+			center=go.layout.mapbox.Center(
+				lat=22.302711,
+				lon=114.177216
+			),
+			pitch=0,
+			zoom=10,
+			style='light',
+		),
+		height=740,
+		margin={'l': 0, 'r': 0, 'b': 0, 't': 0},
+		legend_orientation="h",
+		legend_title='',
+		legend=dict(x=.02, y=0.98)
 	)
-	fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0, 't': 0})
-	fig.update_layout(legend_orientation="h", legend_title='', legend=dict(x=.02, y=0.98))
 
 	return fig
 
@@ -141,14 +190,25 @@ def plot_map(address_df):
 
 app.layout = html.Div([
 	dbc.Row([
-		dbc.Col([
-			html.H1(r'Wuhan Coronavirus Dashboard', style={'text-align': 'center'})
-		])
-	]),
-	dbc.Row([
-		dbc.Col([
-			html.P(f'Last update: {datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S %Z%z")}', style={'text-align': 'right'})
-		])
+		dbc.Col(
+			[
+				html.Img(src=app.get_asset_url(r'fti_logo.png'), id='fti_logo', style={"height": '60px'})
+			],
+			width=3
+		),
+		dbc.Col(
+			[
+				html.H1('Wuhan Coronavirus Dashboard', style={'text-align': 'center'}),
+				html.P('created for demonstration purpose only', style={'text-align': 'center'})
+			],
+			width=6
+		),
+		dbc.Col(
+			[
+				html.P(f'Last update: {datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S %Z%z")}', style={'text-align': 'right'})
+			],
+			width=3
+		)
 	]),
 	dbc.Row(id='live-update-stats'),
 	dbc.Row([
@@ -169,8 +229,8 @@ app.layout = html.Div([
 		dbc.Col(
 			[
 				dash_table.DataTable(
-					data=cases_df[['casenum', 'gender', 'age', 'hospital', 'date']].to_dict('records'),
-					columns=[{'id': c, 'name': c} for c in cases_df[['casenum', 'gender', 'age', 'hospital', 'date']].columns],
+					data=cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].to_dict('records'),
+					columns=[{'id': c, 'name': c} for c in cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].columns],
 					# style_table={'overflowX': 'scroll'},
 					style_cell={
 						'fontSize':14, 
