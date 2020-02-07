@@ -10,10 +10,11 @@ import requests
 import pandas as pd
 import re
 from bs4 import BeautifulSoup
+import json
 
 hk_latitude, hk_longitude = 22.2793278, 114.1628131
 
-def fetch_highrisk():
+def fetch_highrisk_css():
     """
     Returns a list of dictionary that contains the high risk area information.
     
@@ -34,7 +35,40 @@ def fetch_highrisk():
 
     return res
 
+def fetch_highrisk():
+    """
+    Returns a list of dictionary that contains the high risk area information.
+    
+    """
+    page = requests.get('https://wars.vote4.hk/page-data/en/high-risk/page-data.json')
+    data = json.loads(page.content)
+    cases = data['result']['data']['allWarsCaseLocation']['edges']
+    
+    res = []
+    
+    for case in cases:
+        res.append(case['node'])
+    
+    return pd.DataFrame(res)
+
 def fetch_cases():
+    """
+    Returns a DataFrame that contains the confirmed cases information.
+
+    """
+   
+    page = requests.get('https://wars.vote4.hk/page-data/en/cases/page-data.json')
+    data = json.loads(page.content)
+    cases = data['result']['data']['allWarsCase']['edges']
+    
+    res = []
+    
+    for case in cases:
+        res.append(case['node'])
+    
+    return pd.DataFrame(res)
+
+def fetch_cases_css():
     """
     Returns a DataFrame that contains the confirmed cases information.
 
@@ -42,8 +76,8 @@ def fetch_cases():
     page = requests.get('https://wars.vote4.hk/en/cases')
     tree = html.fromstring(page.content)
 
-    boxes = tree.xpath('//*[@id="gatsby-focus-wrapper"]/div/main/div[2]/div[contains(@class, "CaseCard__WarsCaseContainer-zltyy4-0")]')
-
+    boxes = tree.xpath('//div[contains(@class, "CaseCard__WarsCaseContainer-zltyy4-0")]')
+    
     res = []
 
     for box in boxes:
@@ -87,9 +121,26 @@ def fetch_cases():
             'desc': str(desc)
         })
 
+    
+    return pd.DataFrame(res)
+    
+def fetch_awaiting_time():
+    """
+    Return a list of dictionary that contains the hospital awaiting time.
+    
+    """
+    page = requests.get('https://wars.vote4.hk/page-data/en/ae-waiting-time/page-data.json')
+    data = json.loads(page.content)
+    cases = data['result']['data']['allAeWaitingTime']['edges']
+    
+    res = []
+    
+    for case in cases:
+        res.append(case['node'])
+    
     return pd.DataFrame(res)
 
-def fetch_awaiting_time():
+def fetch_awaiting_time_css():
     """
     Return a list of dictionary that contains the hospital awaiting time.
     
@@ -121,6 +172,22 @@ def fetch_stat():
     """
     statnames = ['Death', 'Confirmed', 'Investigating', 'Reported']
     
+    page = requests.get('https://wars.vote4.hk/page-data/en/page-data.json')
+    data = json.loads(page.content)
+    stats = data['result']['data']['allDailyStats']['edges'][0]
+    res = [stats['node']['death'], stats['node']['confirmed_case'], stats['node']['still_investigated'], stats['node']['fulfilling']]
+    
+    df = pd.DataFrame(data=[res], columns=statnames)
+    
+    return df
+
+def fetch_stat_css():
+    """
+    Return a DataFrame that represent death, confirmed, investigating and reported numbers respectively.
+
+    """
+    statnames = ['Death', 'Confirmed', 'Investigating', 'Reported']
+    
     page = requests.get('https://wars.vote4.hk/en/')
     tree = html.fromstring(page.content)
 
@@ -128,7 +195,7 @@ def fetch_stat():
     res = [int(box.xpath('./p[1]/text()')[0].replace(',', '')) for box in boxes]
     
     df = pd.DataFrame(data=[res], columns=statnames)
-
+    
     return df
 
 def fetch_high_risk_address():
