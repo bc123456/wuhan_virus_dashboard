@@ -22,6 +22,16 @@ from wuhan_functions import pop_address, get_coordinates, get_infection_stats, u
 from webscraper import fetch_stat, fetch_cases, fetch_awaiting_time
 
 #########################
+## Update data with the data source?
+#########################
+update = False
+
+if update:
+	print('Pulling data online.')
+else:
+	print('Using old data from local')
+
+#########################
 ## Set up Dash
 #########################
 
@@ -40,43 +50,48 @@ server = app.server
 with open(r'data/ADDRESS.pkl', 'rb') as f:
     address_df = pickle.load(f)
 
-try:
-	new_address_df = update_address(address_df)
+if update:
+	try:
+		new_address_df = update_address(address_df)
 
-	with open(r'data/ADDRESS.pkl', 'wb') as f:
-		pickle.dump(new_address_df,f)
+		with open(r'data/ADDRESS.pkl', 'wb') as f:
+			pickle.dump(new_address_df,f)
 
-	address_df = new_address_df
+		address_df = new_address_df
 
 
-except Exception as e:
-	print('Get new addresses failed.')
+	except Exception as e:
+		print('Get new addresses failed.')
 
 
 
 # 3. Cases
-try:
-	with open(r'data/CASES.pkl', 'rb') as f:
-		cases_df = pickle.load(f)
-	# cases_df = fetch_cases()
-	# with open(r'data/CASES.pkl', 'wb') as f:
-	# 	pickle.dump(cases_df, f)
-except Exception as e:
-	print(e)
-	print(f'Get cases data failed')
-	with open(r'data/CASES.pkl', 'rb') as f:
+
+with open(r'data/CASES.pkl', 'rb') as f:
 		cases_df = pickle.load(f)
 
+if update:
+	try:
+		cases_df = fetch_cases()
+		with open(r'data/CASES.pkl', 'wb') as f:
+			pickle.dump(cases_df, f)
+	except Exception as e:
+		print(e)
+		print(f'Get cases data failed')
+
 # 4. Awaiting time
-try:
-	awaiting_df = fetch_awaiting_time()
-	with open(r'data/AWAITING.pkl', 'wb') as f:
-		pickle.dump(awaiting_df, f)
-except Exception as e:
-	print(e)
-	print(f'Get awaiting time data failed')
-	with open(r'data/AWAITING.pkl', 'rb') as f:
-		awaiting_df = pickle.load(f)
+with open(r'data/AWAITING.pkl', 'rb') as f:
+	awaiting_df = pickle.load(f)
+
+if update:
+	try:
+		awaiting_df = fetch_awaiting_time()
+		with open(r'data/AWAITING.pkl', 'wb') as f:
+			pickle.dump(awaiting_df, f)
+	except Exception as e:
+		print(e)
+		print(f'Get awaiting time data failed')
+	
 
 
 #########################
@@ -107,13 +122,14 @@ def plot_map(address_df):
 	    zoom=10,
 	    # title=r'High Risk Areas',
 	    size=[1] * map_df.dropna().shape[0],
-	    size_max=9,
+	    size_max=6,
 	    opacity=0.9,
 	    color='category',
 	    color_discrete_sequence=px.colors.sequential.Bluered[::-1],
-	    height=540
+	    height=740
 	)
 	fig.update_layout(margin={'l': 0, 'r': 0, 'b': 0, 't': 0})
+	fig.update_layout(legend_orientation="h", legend_title='', legend=dict(x=.02, y=0.98))
 
 	return fig
 
@@ -222,15 +238,18 @@ def update_stats_cards(n):
 	# Get stats data
 
 	# 1. Stats
-	try:
-		stats_df = fetch_stat()
-		with open(r'data/STATS.pkl', 'wb') as f:
-			pickle.dump(stats_df, f)
-	except Exception as e:
-		print(e)
-		print(f'Get stat data failed')
-		with open(r'data/STATS.pkl', 'rb') as f:
-			stats_df = pickle.load(f)
+	with open(r'data/STATS.pkl', 'rb') as f:
+		stats_df = pickle.load(f)
+
+	if update:
+		try:
+			stats_df = fetch_stat()
+			with open(r'data/STATS.pkl', 'wb') as f:
+				pickle.dump(stats_df, f)
+		except Exception as e:
+			print(e)
+			print(f'Get stat data failed')
+		
 
 
 	death = stats_df.loc[0, 'Death']
