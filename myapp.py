@@ -93,7 +93,11 @@ if update:
 		print(e)
 		print(f'Get cases data failed')
 
-# 4. Awaiting time
+# 4. Hospital Awaiting time
+
+with open(r'data/HOSPITALS.pkl', 'rb') as f:
+	hospital_df = pickle.load(f)
+
 with open(r'data/AWAITING.pkl', 'rb') as f:
 	awaiting_df = pickle.load(f)
 
@@ -106,10 +110,15 @@ if update:
 		print(e)
 		print(f'Get awaiting time data failed')
 	
-# hospitals
+hospital_awaiting_df = pd.merge(
+	hospital_df[['address', 'latitude', 'longitude']],
+	awaiting_df[['name_en', 'topWait', 'topWait_value']],
+	how='left',
+	left_on='address',
+	right_on='name_en'
+)
 
-with open(r'data/HOSPITALS.pkl', 'rb') as f:
-	hospital_df = pickle.load(f)
+
 
 
 #########################
@@ -117,70 +126,6 @@ with open(r'data/HOSPITALS.pkl', 'rb') as f:
 #########################
 
 
-def plot_map(address_df):
-	'''
-	Plot the map with labels showing the hospitals and high risk areas
-
-	'''
-
-	with open(r'data/.mapbox_token', 'rb') as f:
-	    token = pickle.load(f)
-
-	px.set_mapbox_access_token(token)
-
-	map_df = high_risk_with_coordinates_df.copy().dropna()
-
-	fig = go.Figure()
-
-	fig.add_trace(go.Scattermapbox(
-		lat=map_df['latitude'],
-		lon=map_df['longitude'],
-		mode='markers',
-		marker=go.scattermapbox.Marker(
-			size=6,
-			color='rgb(255, 0, 0)',
-			opacity=0.9
-		),
-		text=map_df['location_en'],
-		hoverinfo='text',
-		name='High Risk Area'
-	))
-	fig.add_trace(go.Scattermapbox(
-		lat=hospital_df['latitude'],
-		lon=hospital_df['longitude'],
-		mode='markers',
-		marker=go.scattermapbox.Marker(
-			size=6,
-			color='rgb(0, 0, 255)',
-			opacity=0.9
-		),
-		text=hospital_df['address'],
-		hoverinfo='text',
-		name='Hospitals'
-	))
-	fig.update_layout(
-		autosize=True,
-		hovermode='closest',
-		showlegend=True,
-		mapbox=go.layout.Mapbox(
-			accesstoken=token,
-			bearing=0,
-			center=go.layout.mapbox.Center(
-				lat=22.302711,
-				lon=114.177216
-			),
-			pitch=0,
-			zoom=10,
-			style='light',
-		),
-		height=740,
-		margin={'l': 0, 'r': 0, 'b': 0, 't': 0},
-		legend_orientation="h",
-		legend_title='',
-		legend=dict(x=.02, y=0.98)
-	)
-
-	return fig
 
 
 #########################
@@ -214,68 +159,93 @@ app.layout = html.Div([
 	dbc.Row([
 		dbc.Col(
 			[
+				html.H4(['High Risk Areas']),
+			],
+			width=8
+		),
+		dbc.Col(
+			[
 				html.H4(['Confirmed Cases']),
 			],
 			width=4
 		),
-		dbc.Col(
-			[
-				html.H4(['High Risk Areas']),
-			],
-			width=8
-		)
 	]),
 	dbc.Row([
-		dbc.Col(
-			[
-				dash_table.DataTable(
-					data=cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].to_dict('records'),
-					columns=[{'id': c, 'name': c} for c in cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].columns],
-					# style_table={'overflowX': 'scroll'},
-					style_cell={
-						'fontSize':14, 
-						'font-family': 'sans-serif', 
-						'textAlign': 'left',
-						# 'height': 'auto',
-						'minWidth': '0px', 'maxWidth': '80px',
-						# 'whiteSpace': 'normal',
-						'textOverflow': 'ellipsis',
-						'overflow': 'hidden'
-					},
-					style_as_list_view=True
-				)
-			], 
-			width=4
-		),
 		dbc.Col(
 			[
 				dcc.Graph(
-			        id='external-graph',
-			        figure=plot_map(address_df)
+			        id='interactive-map'
 			    )
 			], 
 			width=8
-		)
+		),
+		dbc.Col(
+			[
+				html.Div(
+					[
+						dcc.Checklist(
+							id='high-risk-hospitals',
+						    options=[
+						        {'label': 'High Risk Area   ', 'value': 'show-high-risk'},
+						        {'label': 'Hospitals   ', 'value': 'show-hospitals'}
+						    ],
+						    value=['show-high-risk', 'show-hospitals'],
+						    labelStyle={'display': 'inline-block'}
+						),
+						html.P('Filter hospitals by A&E waiting time: '),
+						dcc.RangeSlider(
+							id='waiting-time-slider',
+							marks={0: '< 1 hour', 1: ' > 1 hour', 2: '> 2 hours', 3: '> 3 hours', 4: '> 4 hours'},
+							min=0,
+							max=4,
+							value=[0, 2]
+						)
+					],
+					className="pretty_container four columns"
+				),
+				dbc.Row([
+				]),
+				dbc.Row([
+					dash_table.DataTable(
+						data=cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].to_dict('records'),
+						columns=[{'id': c, 'name': c} for c in cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].columns],
+						# style_table={'overflowX': 'scroll'},
+						style_cell={
+							'fontSize':14, 
+							'font-family': 'sans-serif', 
+							'textAlign': 'left',
+							# 'height': 'auto',
+							'minWidth': '0px', 'maxWidth': '90px',
+							# 'whiteSpace': 'normal',
+							'textOverflow': 'ellipsis',
+							'overflow': 'hidden'
+						},
+						style_as_list_view=True
+					)
+				])
+			], 
+			width=4
+		),
 	]),
-	dbc.Row([
-		dbc.Col([
-			html.H4(['A&E Waiting Time'])
-		])
-	]),
-	dbc.Row([
-		dbc.Col([
-			dash_table.DataTable(
-				id='table',
-				columns=[{"name": i, "id": i} for i in awaiting_df.columns],
-				data=awaiting_df.to_dict("rows"),
-				style_cell={
-					'fontSize': 14,
-					'font-family': 'sans-serif',
-				},
-				style_as_list_view=True
-		    )
-		])
-	]),
+	# dbc.Row([
+	# 	dbc.Col([
+	# 		html.H4(['A&E Waiting Time'])
+	# 	])
+	# ]),
+	# dbc.Row([
+	# 	dbc.Col([
+	# 		dash_table.DataTable(
+	# 			id='table',
+	# 			columns=[{"name": i, "id": i} for i in awaiting_df.columns],
+	# 			data=awaiting_df.to_dict("rows"),
+	# 			style_cell={
+	# 				'fontSize': 14,
+	# 				'font-family': 'sans-serif',
+	# 			},
+	# 			style_as_list_view=True
+	# 	    )
+	# 	])
+	# ]),
 	dcc.Interval(
         id='interval-component',
         interval=60*1000, # in milliseconds
@@ -287,6 +257,92 @@ app.layout = html.Div([
 ## Live Components
 #########################
 
+# Plot Map
+@app.callback(
+	Output('interactive-map', 'figure'),
+	[
+		Input('high-risk-hospitals', 'value'),
+		Input('waiting-time-slider', 'value')
+	]
+)
+def plot_map(high_risk_hospitals, waiting_time_slider):
+	'''
+	Plot the map with labels showing the hospitals and high risk areas
+
+	'''
+	# slider component to show relevant hospitals
+	waiting_time_min = waiting_time_slider[0]
+	waiting_time_max = waiting_time_slider[1]
+	_hospital_awaiting_df = hospital_awaiting_df[
+		(hospital_awaiting_df['topWait_value'] >= waiting_time_min)
+		# (hospital_awaiting_df['topWait_value'] <= waiting_time_max)
+	].copy()
+
+
+	# Plot the map
+	with open(r'data/.mapbox_token', 'rb') as f:
+	    token = pickle.load(f)
+
+	px.set_mapbox_access_token(token)
+
+	map_df = high_risk_with_coordinates_df.copy().dropna()
+
+	fig = go.Figure()
+
+	if 'show-high-risk' in high_risk_hospitals:
+		fig.add_trace(go.Scattermapbox(
+			lat=map_df['latitude'],
+			lon=map_df['longitude'],
+			mode='markers',
+			marker=go.scattermapbox.Marker(
+				size=6,
+				color='rgb(255, 0, 0)',
+				opacity=0.9
+			),
+			text=map_df['location_en'],
+			hoverinfo='text',
+			name='High Risk Area'
+		))
+	if 'show-hospitals' in high_risk_hospitals:
+		fig.add_trace(go.Scattermapbox(
+			lat=_hospital_awaiting_df['latitude'],
+			lon=_hospital_awaiting_df['longitude'],
+			mode='markers',
+			marker=go.scattermapbox.Marker(
+				size=6,
+				color='rgb(0, 0, 255)',
+				opacity=0.9
+			),
+			text=_hospital_awaiting_df['address'] + ' Waiting time: ' + _hospital_awaiting_df['topWait'] + ' hours',
+			hoverinfo='text',
+			name='Hospitals'
+		))
+	
+	fig.update_layout(
+		autosize=True,
+		hovermode='closest',
+		showlegend=True,
+		mapbox=go.layout.Mapbox(
+			accesstoken=token,
+			bearing=0,
+			center=go.layout.mapbox.Center(
+				lat=22.302711,
+				lon=114.177216
+			),
+			pitch=0,
+			zoom=10,
+			style='light',
+		),
+		height=740,
+		margin={'l': 0, 'r': 0, 'b': 0, 't': 0},
+		legend_orientation="h",
+		legend_title='',
+		legend=dict(x=.02, y=0.98)
+	)
+
+	return fig
+
+# top stats bar (live update every minute)
 @app.callback(
 	Output('live-update-stats', 'children'),
 	[Input('interval-component', 'n_intervals')]

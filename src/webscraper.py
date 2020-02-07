@@ -73,7 +73,7 @@ def fetch_cases():
     
     cases_df = pd.DataFrame(res)
     cases_df = cases_df.sort_values(by='confirmation_date', ascending=False)
-    
+
     return cases_df
 
 def fetch_cases_css():
@@ -146,7 +146,19 @@ def fetch_awaiting_time():
     for case in cases:
         res.append(case['node'])
     
-    return pd.DataFrame(res)
+    awaiting_df = pd.DataFrame(res)
+
+    # Add column 'topWait_value' that will be used in hte slid bar to display hospitals of a particular waiting time group
+    awaiting_df['topWait_value'] = awaiting_df['topWait'].replace(
+        {
+            '< 1': 0,
+            '> 1': 1,
+            '> 2': 2,
+            '> 3': 3,
+            '> 4': 4
+        }
+    )
+    return awaiting_df
 
 def fetch_awaiting_time_css():
     """ (Deprecated)
