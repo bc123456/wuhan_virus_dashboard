@@ -156,7 +156,7 @@ app.layout = html.Div([
 	dbc.Row([
 		dbc.Col(
 			[
-				html.H4(['High Risk Areas']),
+				html.H4(['Map']),
 			],
 			width=8
 		),
@@ -179,9 +179,12 @@ app.layout = html.Div([
 			    		dcc.Dropdown(
 			    			id='case-drop-down',
 							options=[
-								{'label': f'#{row.case_no}: {row.age} years old {row.gender}, {row.type_en} {row.status}', 'value': row.case_no} for idx, row in cases_df.sort_values(by='confirmation_date', ascending=False).iterrows()
+								{
+									'label': f'#{row.case_no}: Age {row.age} {row.gender}, {row.type_en} {row.status}', 
+									'value': row.case_no
+								} for idx, row in cases_df.sort_values(by='case_no', ascending=False).iterrows()
 							],
-							value=str(cases_df['case_no'].astype(int).max())
+							value=cases_df['case_no'].max()
 						),
 						html.Div(id='case-description')
 			    	], 
@@ -368,7 +371,27 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
     [Input(component_id='case-drop-down', component_property='value')]
 )
 def update_case_description(case_no):
-	return cases_df[cases_df['case_no'] == case_no]['detail_en'].values[0]
+	selected_case = cases_df[cases_df['case_no'] == case_no].iloc[0].to_dict()
+	output = [
+		html.Hr(),
+		html.P(f'#{selected_case["case_no"]} ({selected_case["status"]})'),
+		html.H5(f'Age {selected_case["age"]} {selected_case["gender"]}'),
+		html.P([
+			html.Span('Confirmed date: '), 
+			html.Strong(selected_case["confirmation_date"])
+		]),
+		html.P([
+			html.Span('Place of residence: '), 
+			html.Strong(selected_case["citizenship_en"])
+		]),
+		html.P([
+			html.Span('Hospital admitted: '), 
+			html.Strong(selected_case["hospital_en"])
+		]),
+		html.Hr(),
+		html.P(selected_case["detail_en"])
+	]
+	return output
 
 
 # top stats bar (live update every minute)

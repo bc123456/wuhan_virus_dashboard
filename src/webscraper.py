@@ -73,7 +73,8 @@ def fetch_cases():
         res.append(case['node'])
     
     cases_df = pd.DataFrame(res)
-    cases_df = cases_df.sort_values(by='confirmation_date', ascending=False)
+    cases_df['case_no'] = cases_df['case_no'].astype(int)
+    cases_df = cases_df.sort_values(by='case_no', ascending=False)
 
     return cases_df
 
