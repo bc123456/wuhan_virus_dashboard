@@ -75,6 +75,7 @@ if update:
 		with open(r'data/ADDRESS.pkl', 'wb') as f:
 			pickle.dump(address_df, f)
 	except Exception as e:
+		print(e)
 		print('Update address coordinates failed.')
 
 high_risk_with_coordinates_df = pd.merge(
@@ -88,7 +89,7 @@ high_risk_with_coordinates_df = pd.merge(
 # 3. Cases
 
 with open(r'data/CASES.pkl', 'rb') as f:
-		cases_df = pickle.load(f)
+	cases_df = pickle.load(f)
 
 if update:
 	try:
@@ -171,7 +172,21 @@ app.layout = html.Div([
 			[
 				dcc.Graph(
 			        id='interactive-map'
-			    )
+			    ),
+			    html.Div(
+			    	[
+			    		html.H4('New Cases'),
+			    		dcc.Dropdown(
+			    			id='case-drop-down',
+							options=[
+								{'label': f'#{row.case_no}: {row.age} years old {row.gender}, {row.type_en} {row.status}', 'value': row.case_no} for idx, row in cases_df.sort_values(by='confirmation_date', ascending=False).iterrows()
+							],
+							value=str(cases_df['case_no'].astype(int).max())
+						),
+						html.Div(id='case-description')
+			    	], 
+			    	className='mini_container'
+			    ),
 			], 
 			width=8
 		),
@@ -195,28 +210,19 @@ app.layout = html.Div([
 							min=0,
 							max=awaiting_df['topWait_value'].max(),
 							value=[0, 2]
+						),
+						html.P('Filter by districts: '),
+						dcc.Dropdown(
+							id='district-filter',
+							options=[
+								{'label': district, 'value': district} for district in sorted(high_risk_df['sub_district_en'].unique())
+							],
+							multi=True,
+							value=sorted(high_risk_df['sub_district_en'].unique())
 						)
 					],
 					className="pretty_container four columns"
-				),
-				dbc.Row([
-					# dash_table.DataTable(
-					# 	data=cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].to_dict('records'),
-					# 	columns=[{'id': c, 'name': c} for c in cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].columns],
-					# 	# style_table={'overflowX': 'scroll'},
-					# 	style_cell={
-					# 		'fontSize':14, 
-					# 		'font-family': 'sans-serif', 
-					# 		'textAlign': 'left',
-					# 		# 'height': 'auto',
-					# 		'minWidth': '0px', 'maxWidth': '90px',
-					# 		# 'whiteSpace': 'normal',
-					# 		'textOverflow': 'ellipsis',
-					# 		'overflow': 'hidden'
-					# 	},
-					# 	style_as_list_view=True
-					# )
-				])
+				)
 			], 
 			width=4
 		),
@@ -237,10 +243,11 @@ app.layout = html.Div([
 	Output('interactive-map', 'figure'),
 	[
 		Input('high-risk-hospitals', 'value'),
-		Input('waiting-time-slider', 'value')
+		Input('waiting-time-slider', 'value'),
+		Input('district-filter', 'value')
 	]
 )
-def plot_map(high_risk_hospitals, waiting_time_slider):
+def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 	'''
 	Plot the map with labels showing the hospitals and high risk areas
 
@@ -250,13 +257,15 @@ def plot_map(high_risk_hospitals, waiting_time_slider):
 	waiting_time_min = waiting_time_slider[0]
 	waiting_time_max = waiting_time_slider[1]
 
+	
+
 	# Establich masks to mask irrelevant dots
 	hospital_awaiting_masks = (
 		(hospital_awaiting_df['topWait_value'] >= waiting_time_min) &
 		(hospital_awaiting_df['topWait_value'] <= waiting_time_max)
 	)
 
-	high_risk_with_coordinates_masks = ~high_risk_with_coordinates_df['longitude'].isna()
+	high_risk_with_coordinates_masks = high_risk_with_coordinates_df['sub_district_en'].isin(district_filter)
 
 	# Apply masks to highlight points
 	hospital_awaiting_sharp_df = hospital_awaiting_df[hospital_awaiting_masks]
@@ -277,13 +286,27 @@ def plot_map(high_risk_hospitals, waiting_time_slider):
 			lon=high_risk_with_coordinates_sharp_df['longitude'],
 			mode='markers',
 			marker=go.scattermapbox.Marker(
-				size=8,
+				size=10,
 				color='rgb(255, 0, 0)',
 				opacity=0.9
 			),
-			text=high_risk_with_coordinates_sharp_df['location_en'],
+			text=high_risk_with_coordinates_sharp_df['location_en'] + '<br>' + high_risk_with_coordinates_sharp_df['sub_district_en'],
 			hoverinfo='text',
-			name='High Risk Area'
+			name='High Risk Area (selected)'
+		))
+
+		fig.add_trace(go.Scattermapbox(
+			lat=high_risk_with_coordinates_fade_df['latitude'],
+			lon=high_risk_with_coordinates_fade_df['longitude'],
+			mode='markers',
+			marker=go.scattermapbox.Marker(
+				size=7,
+				color='rgb(255, 0, 0)',
+				opacity=0.2
+			),
+			text=high_risk_with_coordinates_fade_df['location_en'] + '<br>' + high_risk_with_coordinates_fade_df['sub_district_en'],
+			hoverinfo='text',
+			name='High Risk Area (not selected)'
 		))
 
 	if 'show-hospitals' in high_risk_hospitals:
@@ -307,7 +330,7 @@ def plot_map(high_risk_hospitals, waiting_time_slider):
 			marker=go.scattermapbox.Marker(
 				size=7,
 				color='rgb(0, 0, 255)',
-				opacity=0.5
+				opacity=0.2
 			),
 			text=hospital_awaiting_fade_df['address'] + ':\n Waiting time: ' + hospital_awaiting_fade_df['topWait'] + ' hours',
 			hoverinfo='text',
@@ -337,6 +360,16 @@ def plot_map(high_risk_hospitals, waiting_time_slider):
 	)
 
 	return fig
+
+# print the case description
+
+@app.callback(
+    Output(component_id='case-description', component_property='children'),
+    [Input(component_id='case-drop-down', component_property='value')]
+)
+def update_case_description(case_no):
+	return cases_df[cases_df['case_no'] == case_no]['detail_en'].values[0]
+
 
 # top stats bar (live update every minute)
 @app.callback(

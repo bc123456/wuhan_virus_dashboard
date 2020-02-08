@@ -72,9 +72,10 @@ def update_address(address_df, high_risk_df):
                 'sub_district_en': row['sub_district_en'],
                 'location_en': row['location_en'],
                 'location_zh': row['location_zh'],
-                'latitude': row['latitude'],
-                'longitude': row['longitude'],
-            })
+                'latitude': latitude,
+                'longitude': longitude,
+            }),
+            ignore_index=True
         )
     return address_df
 
