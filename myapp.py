@@ -227,7 +227,7 @@ app.layout = html.Div([
 							marks={i: f'> {i} hr' for i in range(0, awaiting_df['topWait_value'].max() + 1)},
 							min=0,
 							max=awaiting_df['topWait_value'].max(),
-							value=[0, 2]
+							value=[0, 0]
 						),
 						html.P('Filter high risk areas by dates: '),
 						dcc.DatePickerRange(
