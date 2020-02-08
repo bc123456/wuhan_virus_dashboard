@@ -68,6 +68,7 @@ if update:
 		with open(r'data/HIGH_RISK.pkl', 'wb') as f:
 			pickle.dump(high_risk_df, f)
 	except Exception as e:
+		print(e)
 		print('Get new high risk location failed.')
 	# update the new address with coordinates
 	try:
@@ -181,20 +182,6 @@ app.layout = html.Div([
 		)
 	]),
 	dbc.Row(id='live-update-stats'),
-	# dbc.Row([
-	# 	dbc.Col(
-	# 		[
-	# 			html.H4(['Map']),
-	# 		],
-	# 		width=8
-	# 	),
-	# 	dbc.Col(
-	# 		[
-	# 			html.H4(['Control Panel']),
-	# 		],
-	# 		width=4
-	# 	),
-	# ]),
 	dbc.Row([
 		dbc.Col(
 			[
@@ -242,6 +229,12 @@ app.layout = html.Div([
 							max=awaiting_df['topWait_value'].max(),
 							value=[0, 2]
 						),
+						html.P('Filter high risk areas by dates: '),
+						dcc.DatePickerRange(
+							id='date-filter',
+							start_date=datetime.datetime(2020, 1, 10),
+							end_date=datetime.datetime.today()
+						),
 						html.P('Filter by districts: '),
 						dcc.Dropdown(
 							id='district-filter',
@@ -275,28 +268,51 @@ app.layout = html.Div([
 	[
 		Input('high-risk-hospitals', 'value'),
 		Input('waiting-time-slider', 'value'),
-		Input('district-filter', 'value')
+		Input('district-filter', 'value'),
+		Input('date-filter', 'start_date'),
+		Input('date-filter', 'end_date')
 	]
 )
-def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
+def plot_map(high_risk_hospitals, waiting_time_slider, district_filter, start_date, end_date):
 	'''
 	Plot the map with labels showing the hospitals and high risk areas
 
 	'''
 
+
 	# slider component to show relevant hospitals
 	waiting_time_min = waiting_time_slider[0]
 	waiting_time_max = waiting_time_slider[1]
 
-	
-
-	# Establich masks to mask irrelevant dots
-	hospital_awaiting_masks = (
+	is_within_waiting_time = (
 		(hospital_awaiting_df['topWait_value'] >= waiting_time_min) &
 		(hospital_awaiting_df['topWait_value'] <= waiting_time_max)
 	)
 
-	high_risk_with_coordinates_masks = high_risk_with_coordinates_df['sub_district_en'].isin(district_filter)
+	# date filter components
+	# the record is considered not within date range if:
+	# 1. the start date is later than the specified end_date, or
+	# 2. the end date is earlier than the specified start_date.
+	is_within_date = ~(
+		(high_risk_with_coordinates_df['start_date'] > end_date) |
+		(high_risk_with_coordinates_df['end_date'] < start_date)
+	)
+
+	# district filter components
+	is_within_district = high_risk_with_coordinates_df['sub_district_en'].isin(district_filter)
+
+	
+	# Establich masks to mask irrelevant dots
+	# records to show are labeled with 1, records not to show are marked with 0
+	hospital_awaiting_masks = (
+		is_within_waiting_time
+	)
+
+	# records to show are labeled with 1, records not to show are marked with 0
+	high_risk_with_coordinates_masks = (
+		is_within_district &
+		is_within_date
+	)
 
 	# Apply masks to highlight points
 	hospital_awaiting_sharp_df = hospital_awaiting_df[hospital_awaiting_masks]
@@ -308,7 +324,9 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 
 
 	# Plot the map
-	fig.data = []
+
+
+	fig.data = []  # clear all scatter dots before refreshing
 	
 
 	if 'show-high-risk' in high_risk_hospitals:
@@ -322,7 +340,11 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 				opacity=0.9,
 				symbol='circle'
 			),
-			text=high_risk_with_coordinates_sharp_df['location_en'] + '<br>' + high_risk_with_coordinates_sharp_df['sub_district_en'],
+			text=(
+				high_risk_with_coordinates_sharp_df['location_en'] + '<br>' + 
+				high_risk_with_coordinates_sharp_df['sub_district_en'] + '<br>' + 
+				high_risk_with_coordinates_sharp_df['start_date'].dt.strftime("%Y-%m-%d") + ' - ' + high_risk_with_coordinates_sharp_df['end_date'].dt.strftime("%Y-%m-%d")
+			),
 			hoverinfo='text',
 			name='High Risk Area (selected)'
 		))
@@ -337,7 +359,11 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 				opacity=0.2,
 				symbol='circle'
 			),
-			text=high_risk_with_coordinates_fade_df['location_en'] + '<br>' + high_risk_with_coordinates_fade_df['sub_district_en'],
+			text=(
+				high_risk_with_coordinates_fade_df['location_en'] + '<br>' + 
+				high_risk_with_coordinates_fade_df['sub_district_en'] + '<br>' + 
+				high_risk_with_coordinates_fade_df['start_date'].dt.strftime("%Y-%m-%d") + ' - ' + high_risk_with_coordinates_fade_df['end_date'].dt.strftime("%Y-%m-%d")
+			),
 			hoverinfo='text',
 			name='High Risk Area (not selected)'
 		))
