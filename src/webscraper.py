@@ -8,6 +8,7 @@ Created on Mon Feb  3 12:50:18 2020
 from lxml import html
 import requests
 import pandas as pd
+import numpy as np
 import re
 from bs4 import BeautifulSoup
 import json
@@ -149,15 +150,9 @@ def fetch_awaiting_time():
     awaiting_df = pd.DataFrame(res)
 
     # Add column 'topWait_value' that will be used in hte slid bar to display hospitals of a particular waiting time group
-    awaiting_df['topWait_value'] = awaiting_df['topWait'].replace(
-        {
-            '< 1': 0,
-            '> 1': 1,
-            '> 2': 2,
-            '> 3': 3,
-            '> 4': 4
-        }
-    )
+    replace_dict = {f'> {i}': i for i in np.arange(1, 24)}
+    replace_dict['< 1'] = 0
+    awaiting_df['topWait_value'] = awaiting_df['topWait'].replace(replace_dict)
     return awaiting_df
 
 def fetch_awaiting_time_css():

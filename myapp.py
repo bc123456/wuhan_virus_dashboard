@@ -33,6 +33,12 @@ else:
 	print('Using old data from local')
 
 #########################
+## Get mapbox token (needed for some map designs)
+#########################
+with open(r'data/.mapbox_token', 'rb') as f:
+    token = pickle.load(f)
+
+#########################
 ## Set up Dash
 #########################
 
@@ -118,16 +124,6 @@ hospital_awaiting_df = pd.merge(
 	right_on='name_en'
 )
 
-
-
-
-#########################
-## Plot Map
-#########################
-
-
-
-
 #########################
 ## Website Layout
 #########################
@@ -195,16 +191,14 @@ app.layout = html.Div([
 						html.P('Filter hospitals by A&E waiting time: '),
 						dcc.RangeSlider(
 							id='waiting-time-slider',
-							marks={0: '< 1 hour', 1: ' > 1 hour', 2: '> 2 hours', 3: '> 3 hours', 4: '> 4 hours'},
+							marks={i: f'> {i} hr' for i in range(0, awaiting_df['topWait_value'].max() + 1)},
 							min=0,
-							max=4,
+							max=awaiting_df['topWait_value'].max(),
 							value=[0, 2]
 						)
 					],
 					className="pretty_container four columns"
 				),
-				dbc.Row([
-				]),
 				dbc.Row([
 					dash_table.DataTable(
 						data=cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].to_dict('records'),
@@ -271,19 +265,16 @@ def plot_map(high_risk_hospitals, waiting_time_slider):
 
 	'''
 	# slider component to show relevant hospitals
+
 	waiting_time_min = waiting_time_slider[0]
 	waiting_time_max = waiting_time_slider[1]
 	_hospital_awaiting_df = hospital_awaiting_df[
-		(hospital_awaiting_df['topWait_value'] >= waiting_time_min)
-		# (hospital_awaiting_df['topWait_value'] <= waiting_time_max)
+		(hospital_awaiting_df['topWait_value'] >= waiting_time_min) &
+		(hospital_awaiting_df['topWait_value'] <= waiting_time_max)
 	].copy()
 
 
 	# Plot the map
-	with open(r'data/.mapbox_token', 'rb') as f:
-	    token = pickle.load(f)
-
-	px.set_mapbox_access_token(token)
 
 	map_df = high_risk_with_coordinates_df.copy().dropna()
 
