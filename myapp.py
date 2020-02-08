@@ -153,20 +153,20 @@ app.layout = html.Div([
 		)
 	]),
 	dbc.Row(id='live-update-stats'),
-	dbc.Row([
-		dbc.Col(
-			[
-				html.H4(['Map']),
-			],
-			width=8
-		),
-		dbc.Col(
-			[
-				html.H4(['Control Panel']),
-			],
-			width=4
-		),
-	]),
+	# dbc.Row([
+	# 	dbc.Col(
+	# 		[
+	# 			html.H4(['Map']),
+	# 		],
+	# 		width=8
+	# 	),
+	# 	dbc.Col(
+	# 		[
+	# 			html.H4(['Control Panel']),
+	# 		],
+	# 		width=4
+	# 	),
+	# ]),
 	dbc.Row([
 		dbc.Col(
 			[
@@ -291,7 +291,8 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 			marker=go.scattermapbox.Marker(
 				size=10,
 				color='rgb(255, 0, 0)',
-				opacity=0.9
+				opacity=0.9,
+				symbol='circle'
 			),
 			text=high_risk_with_coordinates_sharp_df['location_en'] + '<br>' + high_risk_with_coordinates_sharp_df['sub_district_en'],
 			hoverinfo='text',
@@ -305,7 +306,8 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 			marker=go.scattermapbox.Marker(
 				size=7,
 				color='rgb(255, 0, 0)',
-				opacity=0.2
+				opacity=0.2,
+				symbol='circle'
 			),
 			text=high_risk_with_coordinates_fade_df['location_en'] + '<br>' + high_risk_with_coordinates_fade_df['sub_district_en'],
 			hoverinfo='text',
@@ -320,7 +322,8 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 			marker=go.scattermapbox.Marker(
 				size=10,
 				color='rgb(0, 0, 255)',
-				opacity=0.9
+				opacity=0.9,
+				symbol='circle'
 			),
 			text='<b>' + hospital_awaiting_sharp_df['address'] + '</b><br>Waiting time: ' + hospital_awaiting_sharp_df['topWait'] + ' hours',
 			hoverinfo='text',
@@ -333,7 +336,8 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 			marker=go.scattermapbox.Marker(
 				size=7,
 				color='rgb(0, 0, 255)',
-				opacity=0.2
+				opacity=0.2,
+				symbol='circle'
 			),
 			text=hospital_awaiting_fade_df['address'] + ':\n Waiting time: ' + hospital_awaiting_fade_df['topWait'] + ' hours',
 			hoverinfo='text',
