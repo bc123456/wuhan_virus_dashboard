@@ -83,7 +83,7 @@ high_risk_with_coordinates_df = pd.merge(
 	how='left',
 	left_on='id',
 	right_on='id'
-)
+).dropna()
 
 # 3. Cases
 
@@ -161,7 +161,7 @@ app.layout = html.Div([
 		),
 		dbc.Col(
 			[
-				html.H4(['Confirmed Cases']),
+				html.H4(['Control Panel']),
 			],
 			width=4
 		),
@@ -200,46 +200,27 @@ app.layout = html.Div([
 					className="pretty_container four columns"
 				),
 				dbc.Row([
-					dash_table.DataTable(
-						data=cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].to_dict('records'),
-						columns=[{'id': c, 'name': c} for c in cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].columns],
-						# style_table={'overflowX': 'scroll'},
-						style_cell={
-							'fontSize':14, 
-							'font-family': 'sans-serif', 
-							'textAlign': 'left',
-							# 'height': 'auto',
-							'minWidth': '0px', 'maxWidth': '90px',
-							# 'whiteSpace': 'normal',
-							'textOverflow': 'ellipsis',
-							'overflow': 'hidden'
-						},
-						style_as_list_view=True
-					)
+					# dash_table.DataTable(
+					# 	data=cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].to_dict('records'),
+					# 	columns=[{'id': c, 'name': c} for c in cases_df[['case_no', 'gender', 'age', 'hospital_en', 'confirmation_date']].columns],
+					# 	# style_table={'overflowX': 'scroll'},
+					# 	style_cell={
+					# 		'fontSize':14, 
+					# 		'font-family': 'sans-serif', 
+					# 		'textAlign': 'left',
+					# 		# 'height': 'auto',
+					# 		'minWidth': '0px', 'maxWidth': '90px',
+					# 		# 'whiteSpace': 'normal',
+					# 		'textOverflow': 'ellipsis',
+					# 		'overflow': 'hidden'
+					# 	},
+					# 	style_as_list_view=True
+					# )
 				])
 			], 
 			width=4
 		),
 	]),
-	# dbc.Row([
-	# 	dbc.Col([
-	# 		html.H4(['A&E Waiting Time'])
-	# 	])
-	# ]),
-	# dbc.Row([
-	# 	dbc.Col([
-	# 		dash_table.DataTable(
-	# 			id='table',
-	# 			columns=[{"name": i, "id": i} for i in awaiting_df.columns],
-	# 			data=awaiting_df.to_dict("rows"),
-	# 			style_cell={
-	# 				'fontSize': 14,
-	# 				'font-family': 'sans-serif',
-	# 			},
-	# 			style_as_list_view=True
-	# 	    )
-	# 	])
-	# ]),
 	dcc.Interval(
         id='interval-component',
         interval=60*1000, # in milliseconds
@@ -264,49 +245,73 @@ def plot_map(high_risk_hospitals, waiting_time_slider):
 	Plot the map with labels showing the hospitals and high risk areas
 
 	'''
-	# slider component to show relevant hospitals
 
+	# slider component to show relevant hospitals
 	waiting_time_min = waiting_time_slider[0]
 	waiting_time_max = waiting_time_slider[1]
-	_hospital_awaiting_df = hospital_awaiting_df[
+
+	# Establich masks to mask irrelevant dots
+	hospital_awaiting_masks = (
 		(hospital_awaiting_df['topWait_value'] >= waiting_time_min) &
 		(hospital_awaiting_df['topWait_value'] <= waiting_time_max)
-	].copy()
+	)
+
+	high_risk_with_coordinates_masks = ~high_risk_with_coordinates_df['longitude'].isna()
+
+	# Apply masks to highlight points
+	hospital_awaiting_sharp_df = hospital_awaiting_df[hospital_awaiting_masks]
+	hospital_awaiting_fade_df = hospital_awaiting_df[~hospital_awaiting_masks]
+
+	high_risk_with_coordinates_sharp_df = high_risk_with_coordinates_df[high_risk_with_coordinates_masks]
+	high_risk_with_coordinates_fade_df = high_risk_with_coordinates_df[~high_risk_with_coordinates_masks]
+
 
 
 	# Plot the map
-
-	map_df = high_risk_with_coordinates_df.copy().dropna()
 
 	fig = go.Figure()
 
 	if 'show-high-risk' in high_risk_hospitals:
 		fig.add_trace(go.Scattermapbox(
-			lat=map_df['latitude'],
-			lon=map_df['longitude'],
+			lat=high_risk_with_coordinates_sharp_df['latitude'],
+			lon=high_risk_with_coordinates_sharp_df['longitude'],
 			mode='markers',
 			marker=go.scattermapbox.Marker(
-				size=6,
+				size=8,
 				color='rgb(255, 0, 0)',
 				opacity=0.9
 			),
-			text=map_df['location_en'],
+			text=high_risk_with_coordinates_sharp_df['location_en'],
 			hoverinfo='text',
 			name='High Risk Area'
 		))
+
 	if 'show-hospitals' in high_risk_hospitals:
 		fig.add_trace(go.Scattermapbox(
-			lat=_hospital_awaiting_df['latitude'],
-			lon=_hospital_awaiting_df['longitude'],
+			lat=hospital_awaiting_sharp_df['latitude'],
+			lon=hospital_awaiting_sharp_df['longitude'],
 			mode='markers',
 			marker=go.scattermapbox.Marker(
-				size=6,
+				size=10,
 				color='rgb(0, 0, 255)',
 				opacity=0.9
 			),
-			text=_hospital_awaiting_df['address'] + ' Waiting time: ' + _hospital_awaiting_df['topWait'] + ' hours',
+			text='<b>' + hospital_awaiting_sharp_df['address'] + '</b><br>Waiting time: ' + hospital_awaiting_sharp_df['topWait'] + ' hours',
 			hoverinfo='text',
-			name='Hospitals'
+			name='Hospitals (selected)'
+		))
+		fig.add_trace(go.Scattermapbox(
+			lat=hospital_awaiting_fade_df['latitude'],
+			lon=hospital_awaiting_fade_df['longitude'],
+			mode='markers',
+			marker=go.scattermapbox.Marker(
+				size=7,
+				color='rgb(0, 0, 255)',
+				opacity=0.5
+			),
+			text=hospital_awaiting_fade_df['address'] + ':\n Waiting time: ' + hospital_awaiting_fade_df['topWait'] + ' hours',
+			hoverinfo='text',
+			name='Hospitals (not selected)'
 		))
 	
 	fig.update_layout(
