@@ -251,6 +251,7 @@ app.layout = html.Div([
 			width=4
 		),
 	]),
+	html.Footer('This website and its contents herein, including all data, mapping, and analysis (“Website”), is provided for educational purpose internally within FTI Consulting, Inc. (FTI).  The Website relies upon publicly available data from multiple sources, that do not always agree. FTI hereby disclaims any and all representations and warranties with respect to the Website, including accuracy, fitness for use, and merchantability.  Reliance on the Website for medical guidance or use of the Website in commerce is strictly prohibited.'),
 	dcc.Interval(
         id='interval-component',
         interval=60*1000, # in milliseconds
