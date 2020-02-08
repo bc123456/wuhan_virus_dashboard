@@ -129,6 +129,34 @@ hospital_awaiting_df = pd.merge(
 ## Website Layout
 #########################
 
+# plot figure (move out of the function to allow faster figure refresh)
+
+fig = go.Figure()
+
+fig.update_layout(
+	autosize=True,
+	hovermode='closest',
+	showlegend=True,
+	mapbox=go.layout.Mapbox(
+		accesstoken=token,
+		bearing=0,
+		center=go.layout.mapbox.Center(
+			lat=22.302711,
+			lon=114.177216
+		),
+		pitch=0,
+		zoom=10,
+		style='light',
+	),
+	height=740,
+	margin={'l': 0, 'r': 0, 'b': 0, 't': 0},
+	legend_orientation="h",
+	legend_title='',
+	legend=dict(x=.02, y=0.98)
+)
+
+
+# website layout
 
 app.layout = html.Div([
 	dbc.Row([
@@ -280,8 +308,8 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 
 
 	# Plot the map
-
-	fig = go.Figure()
+	fig.data = []
+	
 
 	if 'show-high-risk' in high_risk_hospitals:
 		fig.add_trace(go.Scattermapbox(
@@ -344,27 +372,7 @@ def plot_map(high_risk_hospitals, waiting_time_slider, district_filter):
 			name='Hospitals (not selected)'
 		))
 	
-	fig.update_layout(
-		autosize=True,
-		hovermode='closest',
-		showlegend=True,
-		mapbox=go.layout.Mapbox(
-			accesstoken=token,
-			bearing=0,
-			center=go.layout.mapbox.Center(
-				lat=22.302711,
-				lon=114.177216
-			),
-			pitch=0,
-			zoom=10,
-			style='light',
-		),
-		height=740,
-		margin={'l': 0, 'r': 0, 'b': 0, 't': 0},
-		legend_orientation="h",
-		legend_title='',
-		legend=dict(x=.02, y=0.98)
-	)
+	
 
 	return fig
 
