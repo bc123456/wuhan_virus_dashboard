@@ -81,10 +81,10 @@ if update:
 
 high_risk_with_coordinates_df = pd.merge(
 	high_risk_df,
-	address_df[['id', 'latitude', 'longitude']],
+	address_df[['location_en', 'latitude', 'longitude']],
 	how='left',
-	left_on='id',
-	right_on='id'
+	left_on='location_en',
+	right_on='location_en'
 ).dropna()
 
 # 3. Cases

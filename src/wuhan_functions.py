@@ -49,7 +49,7 @@ def get_coordinates(address):
 
 def update_address(address_df, high_risk_df):
     unseen_df = high_risk_df[
-        ~high_risk_df['id'].isin(address_df['id'])
+        ~high_risk_df['location_en'].isin(address_df['location_en'])
     ][
         ['id', 'sub_district_zh', 'sub_district_en', 'location_en', 'location_zh']
     ].copy()

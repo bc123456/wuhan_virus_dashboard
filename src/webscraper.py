@@ -191,8 +191,8 @@ def fetch_stat():
     
     page = requests.get('https://wars.vote4.hk/page-data/en/page-data.json')
     data = json.loads(page.content)
-    stats = data['result']['data']['allDailyStats']['edges'][0]
-    res = [stats['node']['death'], stats['node']['confirmed_case'], stats['node']['still_investigated'], stats['node']['fulfilling']]
+    stats = data['result']['data']['allBotWarsLatestFigures']['edges'][0]
+    res = [stats['node']['death'], stats['node']['confirmed'], stats['node']['investigating'], stats['node']['reported']]
     
     df = pd.DataFrame(data=[res], columns=statnames)
     
