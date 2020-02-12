@@ -185,16 +185,33 @@ def fetch_awaiting_time_css():
 def fetch_stat():
     """
     Return a DataFrame that represent death, confirmed, investigating and reported numbers respectively.
-
+    
+    There are two elements in the json that contain the required value: 
+    "allBotWarsLatestFigures" and "allWarsLatestFiguresOverride".
+    
+    The values in allBotWarsLatestFigures are the record in history for every day.
+    The values in allWarsLatestFiguresOverride are the live values.
+    Whenenver an attribute in allWarsLatestFiguresOverride is not an empty string,
+    it overrides the values in allBotWarsLatestFigures.
+    
     """
     statnames = ['Death', 'Confirmed', 'Investigating', 'Reported']
     
     page = requests.get('https://wars.vote4.hk/page-data/en/page-data.json')
     data = json.loads(page.content)
-    stats = data['result']['data']['allBotWarsLatestFigures']['edges'][0]
-    res = [stats['node']['death'], stats['node']['confirmed'], stats['node']['investigating'], stats['node']['reported']]
+#     print(json.dumps(data['result']['data'], indent=4, sort_keys=True))
+    stats_yesterday = data['result']['data']['allBotWarsLatestFigures']['edges'][0]
+    stats_live = data['result']['data']['allWarsLatestFiguresOverride']['edges'][0]
     
-    df = pd.DataFrame(data=[res], columns=statnames)
+    res = {}
+    
+    for attr in ['death', 'confirmed', 'investigating', 'reported', 'discharged', 'ruled_out']:
+        if stats_live['node'][attr] != "":
+            res[attr] = stats_live['node'][attr]
+        else:
+            res[attr] = stats_yesterday['node'][attr]
+    
+    df = pd.DataFrame(data=res, index=[0])
     
     return df
 

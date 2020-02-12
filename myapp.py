@@ -236,6 +236,15 @@ app.layout = html.Div([
 							end_date=datetime.datetime.today()
 						),
 						html.P('Filter by districts: '),
+						dcc.RadioItems(
+							id='district-radio-items',
+							options=[
+								{'label': 'Clear All', 'value': 'clear-all'},
+								{'label': 'Show All', 'value': 'show-all'}
+							],
+							value='show-all',
+							labelStyle={'display': 'inline-block'}
+						),
 						dcc.Dropdown(
 							id='district-filter',
 							options=[
@@ -262,6 +271,19 @@ app.layout = html.Div([
 #########################
 ## Live Components
 #########################
+
+@app.callback(
+	Output('district-filter', 'value'),
+	[Input('district-radio-items', 'value')]
+)
+def set_dropdown_values(selected_option):
+	if selected_option == 'clear-all':
+		return []
+	elif selected_option == 'show-all':
+		return sorted(high_risk_df['sub_district_en'].unique())
+	else:
+		return []
+
 
 # Plot Map
 @app.callback(
@@ -459,10 +481,11 @@ def update_stats_cards(n):
 		
 
 
-	death = stats_df.loc[0, 'Death']
-	confirmed = stats_df.loc[0, 'Confirmed']
-	investigating = stats_df.loc[0, 'Investigating']
-	reported = stats_df.loc[0, 'Reported']
+	death = stats_df.loc[0, 'death']
+	confirmed = stats_df.loc[0, 'confirmed']
+	investigating = stats_df.loc[0, 'investigating']
+	reported = stats_df.loc[0, 'reported']
+	ruledout = stats_df.loc[0, 'ruled_out']
 
 	return [
 		dbc.Col(
