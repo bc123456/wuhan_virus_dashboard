@@ -53,8 +53,8 @@ def fetch_highrisk():
     ## Change the 'case' column to one that uses string instead of dictionary
     high_risk_df = pd.DataFrame(res)
     high_risk_df['case'] = high_risk_df['case'].apply(lambda d: d['case_no'] if type(d) == dict else '')
-    high_risk_df['start_date'] = pd.to_datetime(high_risk_df['start_date'] + '/2020', format='%d/%m/%Y')
-    high_risk_df['end_date'] = pd.to_datetime(high_risk_df['end_date'] + '/2020', format='%d/%m/%Y')
+    high_risk_df['start_date'] = pd.to_datetime(high_risk_df['start_date'].replace('Invalid date', None), format='%Y-%m-%d')
+    high_risk_df['end_date'] = pd.to_datetime(high_risk_df['end_date'].replace('Invalid date', None), format='%Y-%m-%d')
 
     return high_risk_df
 
