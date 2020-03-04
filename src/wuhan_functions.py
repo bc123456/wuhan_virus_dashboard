@@ -1,83 +1,254 @@
+import os
+
 from geopy.geocoders import Nominatim
 import time
 import pickle
 import pandas as pd
-from webscraper import fetch_high_risk_address
+from webscraper import fetch_highrisk, fetch_cases, fetch_awaiting_time, fetch_stat
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+data_dir = os.path.join(dir_path, '..', 'data') 
 
 
-def pop_address(address):
-    address_lst = address.split(',')
-    return ','.join(address_lst[1:])
-    
-def get_coordinates(address):
-    print(f'Getting the coordinates for new address: {address}.')
-    address = address + ', Hong Kong'
-    trial0 = 0
-    trial1 = 0
-    trial2 = 0
-    location = None
-    geolocator = Nominatim(user_agent='hk_explorer')
-    while location is None and trial0 < 5:
-        trial0 += 1
-        try:
-            location = geolocator.geocode(address)
-        except:
-            pass
-        time.sleep(1)
-    if location is None:
-        simplified_address1 = pop_address(address)
-        while location is None and trial1 < 5:
-            trial1 += 1
-            try:
-                location = geolocator.geocode(simplified_address1)
-            except:
-                pass
-            time.sleep(1)
-    if location is None:
-        simplified_address2 = pop_address(simplified_address1)
-        while location is None and trial2 < 5:
-            trial2 += 1
-            try:
-                location = geolocator.geocode(simplified_address2)
-            except:
-                pass
-            time.sleep(1)
-    if location:
-        return (location.latitude, location.longitude)
-    else:
-        return None, None
-
-def update_address(address_df, high_risk_df):
-    unseen_df = high_risk_df[
-        ~high_risk_df['location_en'].isin(address_df['location_en'])
-    ][
-        ['id', 'sub_district_zh', 'sub_district_en', 'location_en', 'location_zh']
-    ].drop_duplicates(
-        subset=['sub_district_en', 'location_en']
-    ).copy()
-
-    for idx, row in unseen_df.iterrows():
-        address_name = row['location_en'] + ', ' + row['sub_district_en']
-        if 'high speed rail' in address_name.lower():
-            latitude = 22.304080
-            longitude = 114.166501
-        elif '航空' in row['location_zh']:
-            latitude = 22.308007
-            longitude = 113.918803
-        else:
-            latitude, longitude = get_coordinates(address_name)
-
-        address_df = address_df.append(
-            pd.Series({
-                'id': row['id'],
-                'sub_district_zh': row['sub_district_zh'],
-                'sub_district_en': row['sub_district_en'],
-                'location_en': row['location_en'],
-                'location_zh': row['location_zh'],
-                'latitude': latitude,
-                'longitude': longitude,
-            }),
-            ignore_index=True
-        )
+def load_address_csv(path=os.path.join(data_dir, 'ADDRESS.csv')):
+    address_df = pd.read_csv(
+        path, 
+        dtype={
+            'id': str,
+            'sub_district_zh': str,
+            'sub_district_en': str,
+            'location_en': str,
+            'location_zh': str,
+            'longitude': float,
+            'latitude': float
+        }
+    )
     return address_df
+
+def load_awaiting_csv(path=os.path.join(data_dir, 'AWAITING.csv')):
+    awaiting_df = pd.read_csv(
+        path,
+        dtype={
+            'district_en': str,
+            'district_zh': str,
+            'hospCode': str,
+            'hospTimeEn': str,
+            'name_en': str,
+            'name_zh': str,
+            'sub_district_en': str,
+            'sub_district_zh': str,
+            'topWait': str,
+            'topWait_value': int
+        }
+    )
+    return awaiting_df
+
+def load_cases_csv(path=os.path.join(data_dir, 'CASES.csv')):
+    cases_df = pd.read_csv(
+        path,
+        dtype={
+            'case_no': int,
+            'onset_date': str,
+            'confirmation_date': str,
+            'gender': str,
+            'age': int,
+            'hospital_zh': str,
+            'hospital_en': str,
+            'status': str,
+            'status_zh': str,
+            'status_en': str,
+            'type_zh': str,
+            'type_en': str,
+            'citizenship_zh': str,
+            'citizenship_en': str,
+            'detail_zh': str,
+            'detail_en': str,
+            'classification': str,
+            'classification_zh': str,
+            'classification_en': str,
+            'source_url': str,
+        }
+    )
+
+    # cases_df['onset_date'] = pd.to_datetime(cases_df['onset_date'], format='%Y-%m-%d')
+    # cases_df['confirmation_date'] = pd.to_datetime(cases_df['confirmation_date'], format='%Y-%m-%d')
+
+    return cases_df
+
+def load_high_risk_csv(path=os.path.join(data_dir, 'HIGH_RISK.csv')):
+    high_risk_df = pd.read_csv(
+        path,
+        dtype={
+            'action_en': str,
+            'action_zh': str,
+            'case': str,
+            'case_no': str,
+            'end_date': str,
+            'id': str,
+            'lat': float,
+            'lng': float,
+            'location_en': str,
+            'location_zh': str,
+            'remarks_en': str,
+            'remarks_zh': str,
+            'source_url_1': str,
+            'source_url_2': str,
+            'start_date': str,
+            'sub_district_en': str,
+            'sub_district_zh': str,
+            'type': str,
+        }
+    )
+
+    high_risk_df['end_date'] = pd.to_datetime(high_risk_df['end_date'], format='%Y-%m-%d')
+    high_risk_df['start_date'] = pd.to_datetime(high_risk_df['start_date'], format='%Y-%m-%d')
+
+    return high_risk_df
+
+def load_hospitals_csv(path=os.path.join(data_dir, 'HOSPITALS.csv')):
+    hospital_df = pd.read_csv(
+        path,
+        dtype={
+            'address': str,
+            'category': str,
+            'id': int,
+            'latitude': float,
+            'longitude': float,
+        }
+    )
+    return hospital_df
+
+def load_stats_csv(path=os.path.join(data_dir, 'STATS.csv')):
+    stats_df = pd.read_csv(
+        path,
+        dtype={
+            'confirmed': int,
+            'death': int,
+            'discharged': int,
+            'investigating': int,
+            'reported': int,
+            'ruled_out': int,
+        }
+    )
+    return stats_df
+
+def load_hospital_awaiting_csv(
+        hospital_path=os.path.join(data_dir, 'HOSPITALS.csv'),
+        awaiting_path=os.path.join(data_dir, 'AWAITING.csv')
+    ):
+    hospital_df = load_hospitals_csv(hospital_path)
+    awaiting_df = load_awaiting_csv(awaiting_path)
+
+    hospital_awaiting_df = pd.merge(
+        hospital_df[['address', 'latitude', 'longitude']],
+        awaiting_df[['name_en', 'topWait', 'topWait_value']],
+        how='left',
+        left_on='address',
+        right_on='name_en'
+    )
+
+    return hospital_awaiting_df
+    
+
+def load_data_csv():
+    cases_df = load_cases_csv()
+    high_risk_df = load_high_risk_csv()
+    stats_df = load_stats_csv()
+    hospital_awaiting_df = load_hospital_awaiting_csv()
+
+    return cases_df, high_risk_df, stats_df, hospital_awaiting_df
+
+def convert_csv_to_pickle():
+    # address_df = load_address_csv()
+    cases_df = load_cases_csv()
+    high_risk_df = load_high_risk_csv()
+    stats_df = load_stats_csv()
+    hospital_df = load_hospitals_csv()
+    awaiting_df = load_awaiting_csv()
+
+    # with open(os.path.join(data_dir, 'ADDRESS.pkl'), 'wb') as f:
+    #     address_df = pickle.dump(address_df, f)
+    with open(os.path.join(data_dir, 'AWAITING.pkl'), 'wb') as f:
+         pickle.dump(awaiting_df, f)
+    with open(os.path.join(data_dir, 'CASES.pkl'), 'wb') as f:
+         pickle.dump(cases_df, f)
+    with open(os.path.join(data_dir, 'HIGH_RISK.pkl'), 'wb') as f:
+         pickle.dump(high_risk_df, f)
+    with open(os.path.join(data_dir, 'HOSPITALS.pkl'), 'wb') as f:
+         pickle.dump(hospital_df, f)
+    with open(os.path.join(data_dir, 'STATS.pkl'), 'wb') as f:
+         pickle.dump(stats_df, f)
+
+
+
+def load_data_pkl():
+    # with open(os.path.join(data_dir, 'ADDRESS.pkl'), 'rb') as f:
+    #     address_df = pickle.load(f)
+    with open(os.path.join(data_dir, 'AWAITING.pkl'), 'rb') as f:
+        awaiting_df = pickle.load(f)
+    with open(os.path.join(data_dir, 'CASES.pkl'), 'rb') as f:
+        cases_df = pickle.load(f)
+    with open(os.path.join(data_dir, 'HIGH_RISK.pkl'), 'rb') as f:
+        high_risk_df = pickle.load(f)
+    with open(os.path.join(data_dir, 'HOSPITALS.pkl'), 'rb') as f:
+        hospital_df = pickle.load(f)
+    with open(os.path.join(data_dir, 'STATS.pkl'), 'rb') as f:
+        stats_df = pickle.load(f)
+
+    hospital_awaiting_df = pd.merge(
+        hospital_df[['address', 'latitude', 'longitude']],
+        awaiting_df[['name_en', 'topWait', 'topWait_value']],
+        how='left',
+        left_on='address',
+        right_on='name_en'
+    )
+
+    return cases_df, high_risk_df, stats_df, hospital_awaiting_df
+
+def load_data_live():
+    # try:
+    #     with open(os.path.join(data_dir, 'ADDRESS.pkl'), 'rb') as f:
+    #         address_df = pickle.load(f)
+    # except Exception as e:
+    #     print(e)
+    #     print('Load ADDRESS.pkl failed. Now switch to loading from csv.')
+    #     address_df = load_address_csv()
+
+    awaiting_df = fetch_awaiting_time()
+    cases_df = fetch_cases()
+    high_risk_df = fetch_highrisk()
+    try:
+        with open(os.path.join(data_dir, 'HOSPITALS.pkl'), 'rb') as f:
+            hospital_df = pickle.load(f)
+    except Exception as e:
+        hospital_df = load_hospitals_csv()
+    stats_df = fetch_stat()
+
+    hospital_awaiting_df = pd.merge(
+        hospital_df[['address', 'latitude', 'longitude']],
+        awaiting_df[['name_en', 'topWait', 'topWait_value']],
+        how='left',
+        left_on='address',
+        right_on='name_en'
+    )
+
+    return cases_df, high_risk_df, stats_df, hospital_awaiting_df
+
+def load_data(live=False):
+
+    if live:
+        try:
+            return load_data_live()
+        except Exception as e:
+            print(e)
+            print(f'Load live data failed, switching to loading saved data')
+
+    try:
+        return load_data_pkl()
+    except Exception as e:
+        print(f'Loading pickle file failed, trying to read from csv.')
+        convert_csv_to_pickle()
+
+    return load_data_csv()
+
 
