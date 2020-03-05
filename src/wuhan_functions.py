@@ -70,9 +70,6 @@ def load_cases_csv(path=os.path.join(data_dir, 'CASES.csv')):
         }
     )
 
-    # cases_df['onset_date'] = pd.to_datetime(cases_df['onset_date'], format='%Y-%m-%d')
-    # cases_df['confirmation_date'] = pd.to_datetime(cases_df['confirmation_date'], format='%Y-%m-%d')
-
     return cases_df
 
 def load_high_risk_csv(path=os.path.join(data_dir, 'HIGH_RISK.csv')):
@@ -159,15 +156,12 @@ def load_data_csv():
     return cases_df, high_risk_df, stats_df, hospital_awaiting_df
 
 def convert_csv_to_pickle():
-    # address_df = load_address_csv()
     cases_df = load_cases_csv()
     high_risk_df = load_high_risk_csv()
     stats_df = load_stats_csv()
     hospital_df = load_hospitals_csv()
     awaiting_df = load_awaiting_csv()
 
-    # with open(os.path.join(data_dir, 'ADDRESS.pkl'), 'wb') as f:
-    #     address_df = pickle.dump(address_df, f)
     with open(os.path.join(data_dir, 'AWAITING.pkl'), 'wb') as f:
          pickle.dump(awaiting_df, f)
     with open(os.path.join(data_dir, 'CASES.pkl'), 'wb') as f:
@@ -182,8 +176,6 @@ def convert_csv_to_pickle():
 
 
 def load_data_pkl():
-    # with open(os.path.join(data_dir, 'ADDRESS.pkl'), 'rb') as f:
-    #     address_df = pickle.load(f)
     with open(os.path.join(data_dir, 'AWAITING.pkl'), 'rb') as f:
         awaiting_df = pickle.load(f)
     with open(os.path.join(data_dir, 'CASES.pkl'), 'rb') as f:
@@ -206,14 +198,6 @@ def load_data_pkl():
     return cases_df, high_risk_df, stats_df, hospital_awaiting_df
 
 def load_data_live():
-    # try:
-    #     with open(os.path.join(data_dir, 'ADDRESS.pkl'), 'rb') as f:
-    #         address_df = pickle.load(f)
-    # except Exception as e:
-    #     print(e)
-    #     print('Load ADDRESS.pkl failed. Now switch to loading from csv.')
-    #     address_df = load_address_csv()
-
     awaiting_df = fetch_awaiting_time()
     cases_df = fetch_cases()
     high_risk_df = fetch_highrisk()
@@ -238,17 +222,20 @@ def load_data(live=False):
 
     if live:
         try:
+            print('Loading live data')
             return load_data_live()
         except Exception as e:
             print(e)
             print(f'Load live data failed, switching to loading saved data')
-
+            
     try:
+        print('Trying to load data from pickle file.')
         return load_data_pkl()
     except Exception as e:
         print(f'Loading pickle file failed, trying to read from csv.')
-        convert_csv_to_pickle()
+        # convert_csv_to_pickle()
 
+    print('Trying to load data from csv.')
     return load_data_csv()
 
 

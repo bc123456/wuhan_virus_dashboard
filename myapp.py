@@ -34,7 +34,7 @@ server = app.server
 ### load data
 #######################################
 
-cases_df, high_risk_df, stats_df, hospital_awaiting_df = load_data(live=True)
+cases_df, high_risk_df, stats_df, hospital_awaiting_df = load_data(live=False)
 
 ### The function update_stats_cards() is relocated from here
 
@@ -150,12 +150,25 @@ app.layout = html.Div(children=[
     html.Footer('This website and its contents herein, including all data, mapping, and analysis (“Website”), is provided for educational purpose internally within FTI Consulting, Inc. (FTI).  The Website relies upon publicly available data from multiple sources, that do not always agree. FTI hereby disclaims any and all representations and warranties with respect to the Website, including accuracy, fitness for use, and merchantability.  Reliance on the Website for medical guidance or use of the Website in commerce is strictly prohibited.'),
     dcc.Interval(
         id='interval-component',
-        interval=60*1000, # in milliseconds
+        interval=60*1000, # in millisecondsS
         n_intervals=0
     )   ### We updated the interval component here
 ])
 
-### The function update_case_description() is relocated to here
+@app.callback(
+	Output('district-filter', 'value'),
+	[Input('district-radio-items', 'value')]
+)
+def update_district_list(mode):
+	'''Return the dash core item for the district filter
+
+	'''
+	if mode == 'show-all':
+		value = sorted(list(filter(None, high_risk_df['sub_district_en'].unique())))
+	else:
+		value = []
+	return value
+
 
 ### Adding the callback here to link the input (Dropdown list with id='case-drop-down') with output (with id='case-description')
 @app.callback(
