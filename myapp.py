@@ -34,7 +34,7 @@ server = app.server
 ### load data
 #######################################
 
-cases_df, high_risk_df, stats_df, hospital_awaiting_df = load_data(live=False)
+cases_df, high_risk_df, stats_df, hospital_awaiting_df = load_data(live=True)
 
 ### The function update_stats_cards() is relocated from here
 
