@@ -16,8 +16,8 @@ from dash.dependencies import Input, Output
 import plotly.graph_objects as go
 import datetime
 import pytz
-from wuhan_functions import load_data
-from webscraper import fetch_stat
+from wuhan_functions import load_data, calculate_stats
+from webscraper import fetch_cases
 tz = pytz.timezone('Asia/Hong_Kong')
 
 #######################################
@@ -378,25 +378,18 @@ def update_stats_cards(n):
     '''
     # Get stats data
     try:
-        stats_df = fetch_stat()
+        cases_df = fetch_cases()
+        stats_df = calculate_stats(cases_df)
     except Exception as e:
         print(e)
         print(f'Unable to get stats data online.')
 
     death = stats_df.loc[0, 'death']
     confirmed = stats_df.loc[0, 'confirmed']
-    investigating = stats_df.loc[0, 'investigating']
-    reported = stats_df.loc[0, 'reported']
+    discharged = stats_df.loc[0, 'discharged']
+    hospitalised = stats_df.loc[0, 'hospitalised']
 
     return [
-        dbc.Col(
-            [
-                html.Div(
-                    [html.H3(death), html.P('Death')],
-                    className='mini_container'
-                )
-            ]
-        ),
         dbc.Col(
             [
                 html.Div(
@@ -408,7 +401,7 @@ def update_stats_cards(n):
         dbc.Col(
             [
                 html.Div(
-                    [html.H3(investigating), html.P('Investigating')],
+                    [html.H3(discharged), html.P('Discharged')],
                     className='mini_container'
                 )
             ]
@@ -416,7 +409,16 @@ def update_stats_cards(n):
         dbc.Col(
             [
                 html.Div(
-                    [html.H3(reported), html.P('Reported')],
+                    [html.H3(death), html.P('Deceased')],
+                    className='mini_container'
+                )
+            ]
+        ),
+        
+        dbc.Col(
+            [
+                html.Div(
+                    [html.H3(hospitalised), html.P('Hospitalised')],
                     className='mini_container'
                 )
             ]

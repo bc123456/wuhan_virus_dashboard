@@ -4,11 +4,31 @@ from geopy.geocoders import Nominatim
 import time
 import pickle
 import pandas as pd
-from webscraper import fetch_highrisk, fetch_cases, fetch_awaiting_time, fetch_stat
+from webscraper import fetch_highrisk, fetch_cases, fetch_awaiting_time
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 data_dir = os.path.join(dir_path, '..', 'data') 
 
+def calculate_stats(cases_df):
+    """Calcualte the basic statistics based on the information from cases_df
+
+    """
+
+    death = (cases_df['status_en'] == 'Deceased').sum()
+    confirmed = cases_df.shape[0]
+    discharged = (cases_df['status_en'] == 'Discharged').sum()
+    hospitalised = (cases_df['status_en'] == 'Hospitalised').sum()
+
+    df = pd.DataFrame(
+        data={
+            'death': death,
+            'confirmed': confirmed,
+            'discharged': discharged,
+            'hospitalised': hospitalised
+        },
+        index=[0]
+    )
+    return df
 
 def load_address_csv(path=os.path.join(data_dir, 'ADDRESS.csv')):
     address_df = pd.read_csv(
@@ -115,20 +135,6 @@ def load_hospitals_csv(path=os.path.join(data_dir, 'HOSPITALS.csv')):
     )
     return hospital_df
 
-def load_stats_csv(path=os.path.join(data_dir, 'STATS.csv')):
-    stats_df = pd.read_csv(
-        path,
-        dtype={
-            'confirmed': int,
-            'death': int,
-            'discharged': int,
-            'investigating': int,
-            'reported': int,
-            'ruled_out': int,
-        }
-    )
-    return stats_df
-
 def load_hospital_awaiting_csv(
         hospital_path=os.path.join(data_dir, 'HOSPITALS.csv'),
         awaiting_path=os.path.join(data_dir, 'AWAITING.csv')
@@ -150,7 +156,6 @@ def load_hospital_awaiting_csv(
 def load_data_csv():
     cases_df = load_cases_csv()
     high_risk_df = load_high_risk_csv()
-    stats_df = load_stats_csv()
     hospital_awaiting_df = load_hospital_awaiting_csv()
 
     return cases_df, high_risk_df, stats_df, hospital_awaiting_df
@@ -158,7 +163,6 @@ def load_data_csv():
 def convert_csv_to_pickle():
     cases_df = load_cases_csv()
     high_risk_df = load_high_risk_csv()
-    stats_df = load_stats_csv()
     hospital_df = load_hospitals_csv()
     awaiting_df = load_awaiting_csv()
 
@@ -170,8 +174,6 @@ def convert_csv_to_pickle():
          pickle.dump(high_risk_df, f)
     with open(os.path.join(data_dir, 'HOSPITALS.pkl'), 'wb') as f:
          pickle.dump(hospital_df, f)
-    with open(os.path.join(data_dir, 'STATS.pkl'), 'wb') as f:
-         pickle.dump(stats_df, f)
 
 
 
@@ -184,8 +186,8 @@ def load_data_pkl():
         high_risk_df = pickle.load(f)
     with open(os.path.join(data_dir, 'HOSPITALS.pkl'), 'rb') as f:
         hospital_df = pickle.load(f)
-    with open(os.path.join(data_dir, 'STATS.pkl'), 'rb') as f:
-        stats_df = pickle.load(f)
+
+    stats_df = calculate_stats(cases_df)
 
     hospital_awaiting_df = pd.merge(
         hospital_df[['address', 'latitude', 'longitude']],
@@ -206,7 +208,7 @@ def load_data_live():
             hospital_df = pickle.load(f)
     except Exception as e:
         hospital_df = load_hospitals_csv()
-    stats_df = fetch_stat()
+    stats_df = calculate_stats(cases_df)
 
     hospital_awaiting_df = pd.merge(
         hospital_df[['address', 'latitude', 'longitude']],
@@ -237,5 +239,4 @@ def load_data(live=False):
 
     print('Trying to load data from csv.')
     return load_data_csv()
-
 

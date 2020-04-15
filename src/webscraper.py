@@ -32,6 +32,10 @@ def fetch_highrisk():
     ## Change the 'case' column to one that uses string instead of dictionary
     high_risk_df = pd.DataFrame(res)
     high_risk_df['case'] = high_risk_df['case'].apply(lambda d: d['case_no'] if type(d) == dict else '')
+    # temp correct data source error
+    high_risk_df['start_date'] = high_risk_df['start_date'].replace('0220-02-24', '2020-02-24')
+    high_risk_df['start_date'] = high_risk_df['start_date'].replace('0220-03-24', '2020-03-24')
+    # temp correction end
     high_risk_df['start_date'] = pd.to_datetime(high_risk_df['start_date'].replace('Invalid date', None), format='%Y-%m-%d')
     high_risk_df['end_date'] = pd.to_datetime(high_risk_df['end_date'].replace('Invalid date', None), format='%Y-%m-%d')
 
@@ -80,35 +84,3 @@ def fetch_awaiting_time():
     awaiting_df['topWait_value'] = awaiting_df['topWait'].replace(replace_dict)
     return awaiting_df
 
-def fetch_stat():
-    """
-    Return a DataFrame that represent death, confirmed, investigating and reported numbers respectively.
-    
-    There are two elements in the json that contain the required value: 
-    "allBotWarsLatestFigures" and "allWarsLatestFiguresOverride".
-    
-    The values in allBotWarsLatestFigures are the record in history for every day.
-    The values in allWarsLatestFiguresOverride are the live values.
-    Whenenver an attribute in allWarsLatestFiguresOverride is not an empty string,
-    it overrides the values in allBotWarsLatestFigures.
-    
-    """
-    statnames = ['Death', 'Confirmed', 'Investigating', 'Reported']
-    
-    page = requests.get('https://wars.vote4.hk/page-data/en/page-data.json')
-    data = json.loads(page.content)
-#     print(json.dumps(data['result']['data'], indent=4, sort_keys=True))
-    stats_yesterday = data['result']['data']['allBotWarsLatestFigures']['edges'][0]
-    stats_live = data['result']['data']['allWarsLatestFiguresOverride']['edges'][0]
-    
-    res = {}
-    
-    for attr in ['death', 'confirmed', 'investigating', 'reported', 'discharged', 'ruled_out']:
-        if stats_live['node'][attr] != "":
-            res[attr] = stats_live['node'][attr]
-        else:
-            res[attr] = stats_yesterday['node'][attr]
-    
-    df = pd.DataFrame(data=res, index=[0])
-    
-    return df
