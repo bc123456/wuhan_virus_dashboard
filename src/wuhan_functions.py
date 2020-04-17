@@ -1,5 +1,8 @@
 import os
-import pyodbc
+try:
+    import pyodbc
+except Exception as e:
+    print(f'Unable to import pyodbc')
 from geopy.geocoders import Nominatim
 import time
 import pickle
